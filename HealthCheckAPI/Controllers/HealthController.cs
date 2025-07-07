@@ -150,6 +150,7 @@ namespace HealthCheckAPI.Controllers
         }
 
         [ApiExplorerSettings(IgnoreApi = true)]
+        [HttpGet("check")]
         public async Task<List<object>> CheckAllInternalAsync()
         {
             var applications = _config.GetSection("Applications").Get<List<ApplicationConfig>>();

@@ -53,6 +53,18 @@ using (var connection = new SqliteConnection(builder.Configuration.GetConnection
         );
     ";
     command.ExecuteNonQuery();
+
+    command.CommandText = @"
+        CREATE TABLE IF NOT EXISTS ErrorLogs (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            AppId TEXT NOT NULL,
+            Name TEXT NOT NULL,
+            Status TEXT,
+            Timestamp TEXT
+
+            );
+    ";
+    command.ExecuteNonQuery();
 }
 builder.Services.AddHttpClient();
 builder.Services.AddTransient<Email>();
@@ -78,7 +90,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        Description = "Enter your valid token.\n\nExample: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement

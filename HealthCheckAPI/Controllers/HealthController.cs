@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase
@@ -49,9 +49,6 @@ namespace HealthCheckAPI.Controllers
             var results = await CheckAllInternalAsync();
             return Ok(results);
         }
-
-
-
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetHealth(string id)
@@ -148,17 +145,31 @@ namespace HealthCheckAPI.Controllers
             DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
             string timestamp = greeceTime.ToString("yyyy-MM-dd HH:mm:ss");
 
-            var command = connection.CreateCommand();
-            command.CommandText =
-                @"INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
-          VALUES ($id, $name, $status, $timestamp)";
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$name", name);
-            command.Parameters.AddWithValue("$status", status);
-            command.Parameters.AddWithValue("$timestamp", timestamp);
+            using (var command1 = connection.CreateCommand())
+            {
+                command1.CommandText = @"
+            INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
+            VALUES ($id, $name, $status, $timestamp)";
+                command1.Parameters.AddWithValue("$id", id);
+                command1.Parameters.AddWithValue("$name", name);
+                command1.Parameters.AddWithValue("$status", status);
+                command1.Parameters.AddWithValue("$timestamp", timestamp);
+                await command1.ExecuteNonQueryAsync();
+            }
 
-            await command.ExecuteNonQueryAsync();
+            using (var command2 = connection.CreateCommand())
+            {
+                command2.CommandText = @"
+            INSERT INTO ErrorLogs (AppId, Name, Status, Timestamp)
+            VALUES (@appId, @name, @status, @timestamp)";
+                command2.Parameters.AddWithValue("@appId", id);
+                command2.Parameters.AddWithValue("@name", name);
+                command2.Parameters.AddWithValue("@status", status);
+                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                await command2.ExecuteNonQueryAsync();
+            }
         }
+
 
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet("check")]

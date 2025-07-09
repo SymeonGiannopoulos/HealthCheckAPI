@@ -43,8 +43,8 @@ namespace HealthCheckAPI.Controllers
                 return Ok(users);
             }
 
-        [HttpDelete("{Username}")]
-        public async Task<IActionResult> DeleteUser(string username)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
         {
             var connectionString = _config.GetConnectionString("SqliteConnection");
 
@@ -52,20 +52,21 @@ namespace HealthCheckAPI.Controllers
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM Users WHERE Username = @username";
-            command.Parameters.AddWithValue("@username", username);
+            command.CommandText = "DELETE FROM Users WHERE Id = @id";
+            command.Parameters.AddWithValue("@id", id);
 
             var rowsAffected = await command.ExecuteNonQueryAsync();
 
             if (rowsAffected == 0)
             {
-                return NotFound($"User with username '{username}' not found.");
+                return NotFound($"User with ID {id} not found.");
             }
 
-            return NoContent(); 
+            return NoContent();
         }
+
     }
-    
+
 
 
 }

@@ -3,9 +3,11 @@ using Microsoft.Data.Sqlite;
 using HealthCheckAPI.Models;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Error = HealthCheckAPI.Models.Error;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ErrorController : ControllerBase

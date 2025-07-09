@@ -10,9 +10,11 @@ using System.Data;
 using System.Data.SqlClient;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase
@@ -76,11 +78,16 @@ namespace HealthCheckAPI.Controllers
                     {
                         await LogUnhealthyStatusAsync(id, name, "Unhealthy");
 
-                        _emailSender.SendEmail(
-                        "simosgiann@gmail.com",
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        {
+                            _emailSender.SendEmail(
+                        email,
                         $"Alert: {name} is Unhealthy",
                         $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
-);
+
+                        );
+                        }
 
                         return Ok(new { Id = id, Name = name, Status = "Unhealthy" });
                     }
@@ -109,11 +116,15 @@ namespace HealthCheckAPI.Controllers
                     {
                         await LogUnhealthyStatusAsync(id, name, "Unhealthy");
 
-                        _emailSender.SendEmail(
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        {
+                            _emailSender.SendEmail(
                         "simosgiann@gmail.com",
                         $"Alert: {name} is Unhealthy",
                         $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
 );
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -208,11 +219,14 @@ namespace HealthCheckAPI.Controllers
                         command.Parameters.AddWithValue("@id", app.Id);
                         await command.ExecuteNonQueryAsync();
 
-                        _emailSender.SendEmail(
-                        "simosgiann@gmail.com",
-                        $"Update: {app.Name} is Healthy",
-                        $"The application {app.Name} is healthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
-
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        { 
+                            _emailSender.SendEmail(
+                            email,
+                            $"Update: {app.Name} is Healthy",
+                            $"The application {app.Name} is healthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
+                        }
                     }
 
                 }
@@ -225,10 +239,14 @@ namespace HealthCheckAPI.Controllers
                     {
                         await LogUnhealthyStatusAsync(app.Id, app.Name, status);
 
-                        _emailSender.SendEmail(
-                        "simosgiann@gmail.com",
-                        $"Alert: {app.Name} is Unhealthy",
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        {
+                            _emailSender.SendEmail(
+                        email,
+                        $"Alert: {app.Name} is Unealthy",
                         $"The application {app.Name} is unhealthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
+                        }
                     }
                 }
 
@@ -246,6 +264,27 @@ namespace HealthCheckAPI.Controllers
 
             return results;
         }
+        private async Task<List<string>> GetAllUserEmailsAsync()
+        {
+            var emails = new List<string>();
+            var connectionString = _config.GetConnectionString("SqliteConnection");
+
+            using var connection = new SqliteConnection(connectionString);
+            await connection.OpenAsync();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT Email FROM Users WHERE Email IS NOT NULL";
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var email = reader.GetString(0);
+                emails.Add(email);
+            }
+
+            return emails;
+        }
+
 
 
 

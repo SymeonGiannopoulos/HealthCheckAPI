@@ -54,8 +54,8 @@ namespace HealthCheckAPI.Services
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-        INSERT INTO Users (Username, Password, Email, Role)
-        VALUES (@username, @password, @email, @role);
+        INSERT INTO Users (Username, Password, Email)
+        VALUES (@username, @password, @email);
     ";
             command.Parameters.AddWithValue("@username", user.Username);
             command.Parameters.AddWithValue("@password", hashedPassword);

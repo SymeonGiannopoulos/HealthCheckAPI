@@ -1,6 +1,5 @@
 ﻿using HealthCheckAPI;
 using HealthCheckAPI.Controllers;
-using HealthCheckAPI.Interfaces;
 using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Services;
 using Microsoft.AspNetCore.Identity;
@@ -11,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HealthCheckAPI.Models;
 using Microsoft.OpenApi.Models;
+using HealthCheckAPI.Interface;
 
 
 

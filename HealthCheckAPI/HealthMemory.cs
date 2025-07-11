@@ -1,4 +1,5 @@
-﻿using HealthCheckAPI.Interfaces;
+﻿using HealthCheckAPI.Models;
+using HealthCheckAPI.Interface;
 
 namespace HealthCheckAPI
 {

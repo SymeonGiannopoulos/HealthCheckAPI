@@ -9,8 +9,8 @@ using HealthCheckAPI.Notifications;
 using System.Data;
 using System.Data.SqlClient;
 using HealthCheckAPI.Models;
-using HealthCheckAPI.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using HealthCheckAPI.Interface;
 
 namespace HealthCheckAPI.Controllers
 {
@@ -134,7 +134,7 @@ namespace HealthCheckAPI.Controllers
             return BadRequest("Unsupported application type");
         }
 
-        public async Task LogUnhealthyStatusAsync(string id, string name, string status)
+        private async Task LogUnhealthyStatusAsync(string id, string name, string status)
         {
             var connectionString = _config.GetConnectionString("SqliteConnection");
 
@@ -275,7 +275,7 @@ namespace HealthCheckAPI.Controllers
 
             return results;
         }
-        public async Task<List<string>> GetAllUserEmailsAsync()
+        private async Task<List<string>> GetAllUserEmailsAsync()
         {
             var emails = new List<string>();
             var connectionString = _config.GetConnectionString("SqliteConnection");

@@ -1,6 +1,6 @@
 ﻿namespace HealthCheckAPI.Models
 {
-    public class JwtSettings
+    public class JwtSettingsModel
     {
         public string SecretKey { get; set; }
         public string Issuer { get; set; }

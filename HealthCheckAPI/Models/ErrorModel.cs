@@ -1,6 +1,6 @@
 ﻿namespace HealthCheckAPI.Models
 {
-    public class Error
+    public class ErrorModel
     {
         public string Id { get; set; }
         public string Name { get; set; }

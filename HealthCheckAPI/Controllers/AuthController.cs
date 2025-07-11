@@ -32,13 +32,13 @@ namespace HealthCheckAPI.Controllers
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] RegisterRequest request)
+        public IActionResult Register([FromBody] RegisterRequestModel request)
         {
             var existingUser = _userService.GetUserByUsername(request.Username);
             if (existingUser != null)
                 return BadRequest("Username already exists");
 
-            var user = new User
+            var user = new UserModel
             {
                 Username = request.Username,
                 Email = request.Email,

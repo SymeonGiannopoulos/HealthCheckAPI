@@ -11,6 +11,8 @@ using System.Data.SqlClient;
 using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using HealthCheckAPI.Interface;
+using HealthCheckAPI.Services;
+
 
 namespace HealthCheckAPI.Controllers
 {
@@ -23,18 +25,20 @@ namespace HealthCheckAPI.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly Email _emailSender;
         private readonly IHealthMemory _memory;
+        private readonly IHealthService _healthService;
 
         //    private readonly Timer _timer;
         //    private readonly Dictionary<string, string> _previousStatuses = new();
 
 
 
-        public HealthController(IConfiguration config, IHttpClientFactory httpClientFactory, Email emailSender, IHealthMemory memory)
+        public HealthController(IConfiguration config, IHttpClientFactory httpClientFactory, Email emailSender, IHealthMemory memory, IHealthService healthService)
         {
             _config = config;
             _httpClientFactory = httpClientFactory;
             _emailSender = emailSender;
             _memory = memory;
+            _healthService = healthService;
 
 
             /*           _timer = new Timer(async _ =>
@@ -73,9 +77,9 @@ namespace HealthCheckAPI.Controllers
                     }
                     else
                     {
-                        await LogUnhealthyStatusAsync(id, name, "Unhealthy");
+                        await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
 
-                        var userEmails = await GetAllUserEmailsAsync();
+                        var userEmails = await _healthService.GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
@@ -91,7 +95,7 @@ namespace HealthCheckAPI.Controllers
                 }
                 catch (Exception ex)
                 {
-                    await LogUnhealthyStatusAsync(id, name, "Unhealthy");
+                    await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
                     return Ok(new { Id = id, Name = name, Status = "Unhealthy", Message = ex.Message });
                 }
             }
@@ -111,9 +115,9 @@ namespace HealthCheckAPI.Controllers
                     }
                     else
                     {
-                        await LogUnhealthyStatusAsync(id, name, "Unhealthy");
+                        await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
 
-                        var userEmails = await GetAllUserEmailsAsync();
+                        var userEmails = await _healthService.GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
@@ -126,7 +130,7 @@ namespace HealthCheckAPI.Controllers
                 }
                 catch (Exception ex)
                 {
-                    await LogUnhealthyStatusAsync(id, name, "Unhealthy");
+                    await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
                     return Ok(new { Id = id, Name = name, Status = "Unhealthy", Message = ex.Message });
                 }
             }
@@ -134,48 +138,12 @@ namespace HealthCheckAPI.Controllers
             return BadRequest("Unsupported application type");
         }
 
-        private async Task LogUnhealthyStatusAsync(string id, string name, string status)
-        {
-            var connectionString = _config.GetConnectionString("SqliteConnection");
-
-            using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
-
-            TimeZoneInfo greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
-            DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-            string timestamp = greeceTime.ToString("yyyy-MM-dd HH:mm:ss");
-
-            using (var command1 = connection.CreateCommand())
-            {
-                command1.CommandText = @"
-            INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
-            VALUES ($id, $name, $status, $timestamp)";
-                command1.Parameters.AddWithValue("$id", id);
-                command1.Parameters.AddWithValue("$name", name);
-                command1.Parameters.AddWithValue("$status", status);
-                command1.Parameters.AddWithValue("$timestamp", timestamp);
-                await command1.ExecuteNonQueryAsync();
-            }
-
-            using (var command2 = connection.CreateCommand())
-            {
-                command2.CommandText = @"
-            INSERT INTO ErrorLogs (AppId, Name, Status, Timestamp)
-            VALUES (@appId, @name, @status, @timestamp)";
-                command2.Parameters.AddWithValue("@appId", id);
-                command2.Parameters.AddWithValue("@name", name);
-                command2.Parameters.AddWithValue("@status", status);
-                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
-                await command2.ExecuteNonQueryAsync();
-            }
-        }
-
 
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet("check")]
         public async Task<List<object>> CheckAllInternalAsync()
         {
-            var applications = _config.GetSection("Applications").Get<List<ApplicationConfig>>();
+            var applications = _config.GetSection("Applications").Get<List<ApplicationConfigModel>>();
             var results = new List<object>();
 
             var greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
@@ -230,7 +198,7 @@ namespace HealthCheckAPI.Controllers
                         command.Parameters.AddWithValue("@id", app.Id);
                         await command.ExecuteNonQueryAsync();
 
-                        var userEmails = await GetAllUserEmailsAsync();
+                        var userEmails = await _healthService.GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
                         { 
                             _emailSender.SendEmail(
@@ -248,9 +216,9 @@ namespace HealthCheckAPI.Controllers
 
                     if (previousStatus != "Unhealthy")
                     {
-                        await LogUnhealthyStatusAsync(app.Id, app.Name, status);
+                        await _healthService.LogUnhealthyStatusAsync(app.Id, app.Name, status);
 
-                        var userEmails = await GetAllUserEmailsAsync();
+                        var userEmails = await _healthService.GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
@@ -275,7 +243,44 @@ namespace HealthCheckAPI.Controllers
 
             return results;
         }
-        private async Task<List<string>> GetAllUserEmailsAsync()
+
+        /*private async Task LogUnhealthyStatusAsync(string id, string name, string status)
+        {
+            var connectionString = _config.GetConnectionString("SqliteConnection");
+
+            using var connection = new SqliteConnection(connectionString);
+            await connection.OpenAsync();
+
+            TimeZoneInfo greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
+            DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
+            string timestamp = greeceTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+            using (var command1 = connection.CreateCommand())
+            {
+                command1.CommandText = @"
+            INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
+            VALUES ($id, $name, $status, $timestamp)";
+                command1.Parameters.AddWithValue("$id", id);
+                command1.Parameters.AddWithValue("$name", name);
+                command1.Parameters.AddWithValue("$status", status);
+                command1.Parameters.AddWithValue("$timestamp", timestamp);
+                await command1.ExecuteNonQueryAsync();
+            }
+
+            using (var command2 = connection.CreateCommand())
+            {
+                command2.CommandText = @"
+            INSERT INTO ErrorLogs (AppId, Name, Status, Timestamp)
+            VALUES (@appId, @name, @status, @timestamp)";
+                command2.Parameters.AddWithValue("@appId", id);
+                command2.Parameters.AddWithValue("@name", name);
+                command2.Parameters.AddWithValue("@status", status);
+                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                await command2.ExecuteNonQueryAsync();
+            }
+        }*/
+
+        /*private async Task<List<string>> GetAllUserEmailsAsync()
         {
             var emails = new List<string>();
             var connectionString = _config.GetConnectionString("SqliteConnection");
@@ -294,7 +299,7 @@ namespace HealthCheckAPI.Controllers
             }
 
             return emails;
-        }
+        }*/
 
 
 

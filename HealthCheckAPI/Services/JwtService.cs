@@ -9,14 +9,14 @@ namespace HealthCheckAPI.Services
 {
     public class JwtService
     {
-        private readonly JwtSettings _jwtSettings;
+        private readonly JwtSettingsModel _jwtSettings;
 
-        public JwtService(IOptions<JwtSettings> jwtOptions)
+        public JwtService(IOptions<JwtSettingsModel> jwtOptions)
         {
             _jwtSettings = jwtOptions.Value;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(UserModel user)
         {
             var claims = new[]
             {

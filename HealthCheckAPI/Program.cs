@@ -71,7 +71,8 @@ builder.Services.AddTransient<Email>();
 builder.Services.AddHostedService<HealthCheckService>();
 builder.Services.AddTransient<HealthController>();
 builder.Services.AddSingleton<IHealthMemory, HealthMemory>();
-builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IPasswordHasher<UserModel>, PasswordHasher<UserModel>>();
+builder.Services.AddScoped<IHealthService, HealthService>();
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<JwtService>();
@@ -113,13 +114,13 @@ builder.Services.AddSwaggerGen(options =>
 var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
 
 
-builder.Services.Configure<JwtSettings>(jwtSettingsSection);
+builder.Services.Configure<JwtSettingsModel>(jwtSettingsSection);
 
 
 
 
 
-var jwtSettings = jwtSettingsSection.Get<JwtSettings>(); 
+var jwtSettings = jwtSettingsSection.Get<JwtSettingsModel>(); 
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

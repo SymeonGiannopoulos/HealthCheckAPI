@@ -21,7 +21,7 @@ namespace HealthCheckAPI.Controllers
         [HttpGet("live")]
         public IActionResult GetLiveErrors()
         {
-            var errors = new List<Error>();
+            var errors = new List<ErrorModel>();
             var connectionString = _configuration.GetConnectionString("SqliteConnection");
 
             using (var connection = new SqliteConnection(connectionString))
@@ -35,7 +35,7 @@ namespace HealthCheckAPI.Controllers
                 {
                     while (reader.Read())
                     {
-                        errors.Add(new Error
+                        errors.Add(new ErrorModel
                         {
                             Id = reader.GetString(0),
                             Name = reader.GetString(1),

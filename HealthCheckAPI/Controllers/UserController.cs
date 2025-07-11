@@ -17,9 +17,9 @@ namespace HealthCheckAPI.Controllers
             }
 
             [HttpGet]
-            public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+            public async Task<ActionResult<IEnumerable<UserModel>>> GetUsers()
             {
-                var users = new List<User>();
+                var users = new List<UserModel>();
                 var connectionString = _config.GetConnectionString("SqliteConnection");
 
                 using var connection = new SqliteConnection(connectionString);
@@ -31,7 +31,7 @@ namespace HealthCheckAPI.Controllers
                 using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
-                    users.Add(new User
+                    users.Add(new UserModel
                     {
                         Id = reader.GetInt32(0),
                         Username = reader.GetString(1),

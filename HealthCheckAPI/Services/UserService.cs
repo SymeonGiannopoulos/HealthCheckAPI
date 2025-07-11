@@ -7,15 +7,15 @@ namespace HealthCheckAPI.Services
     public class UserService
     {
         private readonly IConfiguration _configuration;
-        private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IPasswordHasher<UserModel> _passwordHasher;
 
-        public UserService(IConfiguration configuration, IPasswordHasher<User> passwordHasher)
+        public UserService(IConfiguration configuration, IPasswordHasher<UserModel> passwordHasher)
         {
             _configuration = configuration;
             _passwordHasher = passwordHasher;
         }
 
-        public User GetUserByUsername(string username)
+        public UserModel GetUserByUsername(string username)
         {
             using var connection = new SqliteConnection(_configuration.GetConnectionString("SqliteConnection"));
             connection.Open();
@@ -27,7 +27,7 @@ namespace HealthCheckAPI.Services
             using var reader = command.ExecuteReader();
             if (reader.Read())
             {
-                return new User
+                return new UserModel
                 {
                     Id = reader.GetInt32(0),
                     Username = reader.GetString(1),
@@ -38,13 +38,13 @@ namespace HealthCheckAPI.Services
             return null;
         }
 
-        public bool VerifyPassword(User user, string password)
+        public bool VerifyPassword(UserModel user, string password)
         {
             var result = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
             return result == PasswordVerificationResult.Success;
         }
 
-        public void CreateUser(User user, string password)
+        public void CreateUser(UserModel user, string password)
         {
             // Κάνουμε hash το password
             var hashedPassword = _passwordHasher.HashPassword(user, password);

@@ -1,6 +1,6 @@
 ﻿namespace HealthCheckAPI.Models
 {
-    public class ApplicationConfig
+    public class ApplicationConfigModel
     {
         public string Id { get; set; }
         public string Name { get; set; }

@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 using System;
 using HealthCheckAPI.Notifications;
 using System.Data;
-using System.Data.SqlClient;
+using System.Data.SqlClient; 
 using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using HealthCheckAPI.Interface;
 using HealthCheckAPI.Services;
-
 
 namespace HealthCheckAPI.Controllers
 {
@@ -27,11 +26,6 @@ namespace HealthCheckAPI.Controllers
         private readonly IHealthMemory _memory;
         private readonly IHealthService _healthService;
 
-        //    private readonly Timer _timer;
-        //    private readonly Dictionary<string, string> _previousStatuses = new();
-
-
-
         public HealthController(IConfiguration config, IHttpClientFactory httpClientFactory, Email emailSender, IHealthMemory memory, IHealthService healthService)
         {
             _config = config;
@@ -39,14 +33,8 @@ namespace HealthCheckAPI.Controllers
             _emailSender = emailSender;
             _memory = memory;
             _healthService = healthService;
-
-
-            /*           _timer = new Timer(async _ =>
-                       {
-                           await CheckAllInternalAsync();
-                       }, null, TimeSpan.Zero, TimeSpan.FromSeconds(60));*/
-
         }
+
         [HttpGet("check-all")]
         public async Task<IActionResult> CheckAll()
         {
@@ -86,7 +74,6 @@ namespace HealthCheckAPI.Controllers
                         email,
                         $"Alert: {name} is Unhealthy",
                         $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
-
                         );
                         }
 
@@ -103,10 +90,11 @@ namespace HealthCheckAPI.Controllers
             {
                 try
                 {
-                    using var connection = new SqliteConnection(app["ConnectionString"]);
+                    // Changed to SQL Server from SQLite
+                    using var connection = new SqlConnection(app["ConnectionString"]); // Changed to SQL Server
                     await connection.OpenAsync();
 
-                    using var command = new SqliteCommand(app["Query"], connection);
+                    using var command = new SqlCommand(app["Query"], connection); // Changed to SQL Server
                     var result = await command.ExecuteScalarAsync();
 
                     if (result != null)
@@ -121,7 +109,7 @@ namespace HealthCheckAPI.Controllers
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
-                        "simosgiann@gmail.com",
+                        email,
                         $"Alert: {name} is Unhealthy",
                         $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
 );
@@ -137,7 +125,6 @@ namespace HealthCheckAPI.Controllers
 
             return BadRequest("Unsupported application type");
         }
-
 
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet("check")]
@@ -171,7 +158,8 @@ namespace HealthCheckAPI.Controllers
                 {
                     try
                     {
-                        using var connection = new SqliteConnection(app.ConnectionString);
+                        // Changed to SQL Server from SQLite
+                        using var connection = new SqlConnection(app.ConnectionString); 
                         await connection.OpenAsync();
                         using var command = connection.CreateCommand();
                         command.CommandText = app.Query;
@@ -182,15 +170,15 @@ namespace HealthCheckAPI.Controllers
                         status = "Unhealthy";
                     }
                 }
+
                 if (status == "Healthy")
                 {
-                    //_previousStatuses.TryGetValue(app.Id, out var previousStatus);
                     _memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
 
                     if (previousStatus != "Healthy")
                     {
-                        var connectionString = _config.GetConnectionString("SqliteConnection");
-                        using var connection = new SqliteConnection(connectionString);
+                        var connectionString = _config.GetConnectionString("SqlServerConnection"); 
+                        using var connection = new SqlConnection(connectionString); 
                         await connection.OpenAsync();
 
                         var command = connection.CreateCommand();
@@ -200,7 +188,7 @@ namespace HealthCheckAPI.Controllers
 
                         var userEmails = await _healthService.GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
-                        { 
+                        {
                             _emailSender.SendEmail(
                             email,
                             $"Update: {app.Name} is Healthy",
@@ -211,7 +199,6 @@ namespace HealthCheckAPI.Controllers
                 }
                 else
                 {
-                    //_previousStatuses.TryGetValue(app.Id, out var previousStatus);
                     _memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
 
                     if (previousStatus != "Unhealthy")
@@ -229,8 +216,6 @@ namespace HealthCheckAPI.Controllers
                     }
                 }
 
-
-                //_previousStatuses[app.Id] = status;
                 _memory.StatusMap[app.Id] = status;
 
                 results.Add(new
@@ -243,68 +228,5 @@ namespace HealthCheckAPI.Controllers
 
             return results;
         }
-
-        /*private async Task LogUnhealthyStatusAsync(string id, string name, string status)
-        {
-            var connectionString = _config.GetConnectionString("SqliteConnection");
-
-            using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
-
-            TimeZoneInfo greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
-            DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-            string timestamp = greeceTime.ToString("yyyy-MM-dd HH:mm:ss");
-
-            using (var command1 = connection.CreateCommand())
-            {
-                command1.CommandText = @"
-            INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
-            VALUES ($id, $name, $status, $timestamp)";
-                command1.Parameters.AddWithValue("$id", id);
-                command1.Parameters.AddWithValue("$name", name);
-                command1.Parameters.AddWithValue("$status", status);
-                command1.Parameters.AddWithValue("$timestamp", timestamp);
-                await command1.ExecuteNonQueryAsync();
-            }
-
-            using (var command2 = connection.CreateCommand())
-            {
-                command2.CommandText = @"
-            INSERT INTO ErrorLogs (AppId, Name, Status, Timestamp)
-            VALUES (@appId, @name, @status, @timestamp)";
-                command2.Parameters.AddWithValue("@appId", id);
-                command2.Parameters.AddWithValue("@name", name);
-                command2.Parameters.AddWithValue("@status", status);
-                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
-                await command2.ExecuteNonQueryAsync();
-            }
-        }*/
-
-        /*private async Task<List<string>> GetAllUserEmailsAsync()
-        {
-            var emails = new List<string>();
-            var connectionString = _config.GetConnectionString("SqliteConnection");
-
-            using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Email FROM Users WHERE Email IS NOT NULL";
-
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var email = reader.GetString(0);
-                emails.Add(email);
-            }
-
-            return emails;
-        }*/
-
-
-
-
-
-
     }
 }

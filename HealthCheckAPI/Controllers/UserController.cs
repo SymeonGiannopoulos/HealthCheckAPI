@@ -1,54 +1,56 @@
 ﻿using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;  // αλλαγή εδώ
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace HealthCheckAPI.Controllers
 {
-    
-        [ApiController]
-        [Route("[controller]")]
-        public class UserController : ControllerBase
+    [ApiController]
+    [Route("[controller]")]
+    public class UserController : ControllerBase
+    {
+        private readonly IConfiguration _config;
+
+        public UserController(IConfiguration config)
         {
-            private readonly IConfiguration _config;
+            _config = config;
+        }
 
-            public UserController(IConfiguration config)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<UserModel>>> GetUsers()
+        {
+            var users = new List<UserModel>();
+            var connectionString = _config.GetConnectionString("SqlServerConnection");  
+
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT Id, Username, Password, Email FROM Users";
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                _config = config;
-            }
-
-            [HttpGet]
-            public async Task<ActionResult<IEnumerable<UserModel>>> GetUsers()
-            {
-                var users = new List<UserModel>();
-                var connectionString = _config.GetConnectionString("SqliteConnection");
-
-                using var connection = new SqliteConnection(connectionString);
-                await connection.OpenAsync();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT Id, Username, Password, Email FROM Users";
-
-                using var reader = await command.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                users.Add(new UserModel
                 {
-                    users.Add(new UserModel
-                    {
-                        Id = reader.GetInt32(0),
-                        Username = reader.GetString(1),
-                        Password = reader.GetString(2),
-                        Email = reader.IsDBNull(3) ? null : reader.GetString(3)
-                    });
-                }
-
-                return Ok(users);
+                    Id = reader.GetInt32(0),
+                    Username = reader.GetString(1),
+                    Password = reader.GetString(2),
+                    Email = reader.IsDBNull(3) ? null : reader.GetString(3)
+                });
             }
+
+            return Ok(users);
+        }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var connectionString = _config.GetConnectionString("SqliteConnection");
+            var connectionString = _config.GetConnectionString("SqlServerConnection");  
 
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
@@ -64,12 +66,5 @@ namespace HealthCheckAPI.Controllers
 
             return NoContent();
         }
-
     }
-
-
-
 }
-    
-
-

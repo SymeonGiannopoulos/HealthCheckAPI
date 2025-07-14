@@ -1,6 +1,6 @@
 ﻿using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient; 
 
 namespace HealthCheckAPI.Services
 {
@@ -17,11 +17,11 @@ namespace HealthCheckAPI.Services
 
         public UserModel GetUserByUsername(string username)
         {
-            using var connection = new SqliteConnection(_configuration.GetConnectionString("SqliteConnection"));
+            using var connection = new SqlConnection(_configuration.GetConnectionString("SqlServerConnection"));
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT Id, Username, Password, Email, Role FROM Users WHERE Username = @username";
+            command.CommandText = "SELECT Id, Username, Password, Email FROM Users WHERE Username = @username";
             command.Parameters.AddWithValue("@username", username);
 
             using var reader = command.ExecuteReader();
@@ -32,7 +32,7 @@ namespace HealthCheckAPI.Services
                     Id = reader.GetInt32(0),
                     Username = reader.GetString(1),
                     Password = reader.GetString(2),
-                    Email = reader.GetString(3),
+                    Email = reader.IsDBNull(3) ? null : reader.GetString(3), 
                 };
             }
             return null;
@@ -46,26 +46,26 @@ namespace HealthCheckAPI.Services
 
         public void CreateUser(UserModel user, string password)
         {
-            // Κάνουμε hash το password
             var hashedPassword = _passwordHasher.HashPassword(user, password);
 
-            using var connection = new SqliteConnection(_configuration.GetConnectionString("SqliteConnection"));
+            using var connection = new SqlConnection(_configuration.GetConnectionString("SqlServerConnection"));
             connection.Open();
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-        INSERT INTO Users (Username, Password, Email)
-        VALUES (@username, @password, @email);
-    ";
+                INSERT INTO Users (Username, Password, Email)
+                VALUES (@username, @password, @email);
+            ";
+
             command.Parameters.AddWithValue("@username", user.Username);
             command.Parameters.AddWithValue("@password", hashedPassword);
-            command.Parameters.AddWithValue("@email", user.Email ?? "");
+
+            if (string.IsNullOrEmpty(user.Email))
+                command.Parameters.AddWithValue("@email", DBNull.Value);
+            else
+                command.Parameters.AddWithValue("@email", user.Email);
 
             command.ExecuteNonQuery();
         }
     }
-
-    
-
-
 }

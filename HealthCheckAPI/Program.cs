@@ -4,7 +4,7 @@ using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -27,45 +27,54 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-using (var connection = new SqliteConnection(builder.Configuration.GetConnectionString("SqliteConnection")))
+using (var connection = new SqlConnection(builder.Configuration.GetConnectionString("SqlServerConnection")))
 {
     connection.Open();
 
     var command = connection.CreateCommand();
-    command.CommandText = @"
-        CREATE TABLE IF NOT EXISTS HealthStatusLog (
-            Id TEXT,
-            Name TEXT,
-            Status TEXT,
-            Timestamp TEXT
-        );
-    ";
-
-    command.ExecuteNonQuery();
 
     command.CommandText = @"
-        CREATE TABLE IF NOT EXISTS Users (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Username TEXT NOT NULL UNIQUE,
-            Password TEXT NOT NULL,
-            Email TEXT
-            
-        );
-    ";
-    command.ExecuteNonQuery();
-
-    command.CommandText = @"
-        CREATE TABLE IF NOT EXISTS ErrorLogs (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            AppId TEXT NOT NULL,
-            Name TEXT NOT NULL,
-            Status TEXT,
-            Timestamp TEXT
-
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'HealthStatusLog')
+        BEGIN
+            CREATE TABLE HealthStatusLog (
+                Id NVARCHAR(50),
+                Name NVARCHAR(100),
+                Status NVARCHAR(50),
+                Timestamp DATETIME
             );
+        END
+    ";
+    command.ExecuteNonQuery();
+
+    command.CommandText = @"
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
+        BEGIN
+            CREATE TABLE Users (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                Username NVARCHAR(100) NOT NULL UNIQUE,
+                Password NVARCHAR(256) NOT NULL,
+                Email NVARCHAR(256)
+            );
+        END
+    ";
+    command.ExecuteNonQuery();
+
+    command.CommandText = @"
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ErrorLogs')
+        BEGIN
+            CREATE TABLE ErrorLogs (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                AppId NVARCHAR(50) NOT NULL,
+                Name NVARCHAR(100) NOT NULL,
+                Status NVARCHAR(50),
+                Timestamp DATETIME
+            );
+        END
     ";
     command.ExecuteNonQuery();
 }
+
+
 builder.Services.AddHttpClient();
 builder.Services.AddTransient<Email>();
 builder.Services.AddHostedService<HealthCheckService>();

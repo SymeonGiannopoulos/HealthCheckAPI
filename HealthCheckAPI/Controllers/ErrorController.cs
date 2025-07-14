@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 
@@ -17,19 +17,17 @@ namespace HealthCheckAPI.Controllers
             _configuration = configuration;
         }
 
-        
         [HttpGet("live")]
         public IActionResult GetLiveErrors()
         {
             var errors = new List<ErrorModel>();
-            var connectionString = _configuration.GetConnectionString("SqliteConnection");
+            var connectionString = _configuration.GetConnectionString("SqlServerConnection");
 
-            using (var connection = new SqliteConnection(connectionString))
+            using (var connection = new SqlConnection(connectionString))
             {
                 connection.Open();
 
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT Id, Name, Status, Timestamp FROM HealthStatusLog";
+                var command = new SqlCommand("SELECT Id, Name, Status, Timestamp FROM HealthStatusLog", connection);
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -37,10 +35,10 @@ namespace HealthCheckAPI.Controllers
                     {
                         errors.Add(new ErrorModel
                         {
-                            Id = reader.GetString(0),
-                            Name = reader.GetString(1),
-                            Status = reader.GetString(2),
-                            Timestamp = reader.GetString(3)
+                            Id = reader["Id"].ToString(),
+                            Name = reader["Name"].ToString(),
+                            Status = reader["Status"].ToString(),
+                            Timestamp = reader["Timestamp"].ToString()
                         });
                     }
                 }
@@ -49,63 +47,60 @@ namespace HealthCheckAPI.Controllers
             return Ok(errors);
         }
 
-        
         [HttpGet("logs")]
         public async Task<IActionResult> GetAllErrorLogs()
         {
             var errorLogs = new List<object>();
-            var connectionString = _configuration.GetConnectionString("SqliteConnection");
+            var connectionString = _configuration.GetConnectionString("SqlServerConnection");
 
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM ErrorLogs ORDER BY Timestamp DESC";
+            var command = new SqlCommand("SELECT * FROM ErrorLogs ORDER BY Timestamp DESC", connection);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 errorLogs.Add(new
                 {
-                    Id = reader["Id"],
-                    AppId = reader["AppId"],
-                    Name = reader["Name"],
-                    Status = reader["Status"],
-                    Timestamp = reader["Timestamp"]
+                    Id = reader["Id"].ToString(),
+                    AppId = reader["AppId"].ToString(),
+                    Name = reader["Name"].ToString(),
+                    Status = reader["Status"].ToString(),
+                    Timestamp = reader["Timestamp"].ToString()
                 });
             }
 
             return Ok(errorLogs);
         }
 
-        
-        [HttpGet("logs/{name}")]
-        public async Task<IActionResult> GetErrorLogsByName(string name)
+        [HttpGet("logs/id/{id}")]
+        public async Task<IActionResult> GetErrorLogsById(string id)
         {
             var errorLogs = new List<object>();
-            var connectionString = _configuration.GetConnectionString("SqliteConnection");
+            var connectionString = _configuration.GetConnectionString("SqlServerConnection");
 
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM ErrorLogs WHERE Name = @name ORDER BY Timestamp DESC";
-            command.Parameters.AddWithValue("@name", name);
+            var command = new SqlCommand("SELECT * FROM ErrorLogs WHERE Id = @id ORDER BY Timestamp DESC", connection);
+            command.Parameters.AddWithValue("@id", id);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 errorLogs.Add(new
                 {
-                    Id = reader["Id"],
-                    AppId = reader["AppId"],
-                    Name = reader["Name"],
-                    Status = reader["Status"],
-                    Timestamp = reader["Timestamp"]
+                    Id = reader["Id"].ToString(),
+                    AppId = reader["AppId"].ToString(),
+                    Name = reader["Name"].ToString(),
+                    Status = reader["Status"].ToString(),
+                    Timestamp = reader["Timestamp"].ToString()
                 });
             }
 
             return Ok(errorLogs);
         }
+
     }
 }

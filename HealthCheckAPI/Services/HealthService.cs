@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Data.SqlClient;  // Αλλαγή εδώ
 using System.Data;
 
 namespace HealthCheckAPI.Services
@@ -19,9 +19,9 @@ namespace HealthCheckAPI.Services
         public async Task<List<string>> GetAllUserEmailsAsync()
         {
             var emails = new List<string>();
-            var connectionString = _config.GetConnectionString("SqliteConnection");
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
 
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
             var command = connection.CreateCommand();
@@ -39,24 +39,25 @@ namespace HealthCheckAPI.Services
 
         public async Task LogUnhealthyStatusAsync(string id, string name, string status)
         {
-            var connectionString = _config.GetConnectionString("SqliteConnection");
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
 
-            using var connection = new SqliteConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
             TimeZoneInfo greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
             DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-            string timestamp = greeceTime.ToString("yyyy-MM-dd HH:mm:ss");
+         
+            DateTime timestamp = greeceTime;
 
             using (var command1 = connection.CreateCommand())
             {
                 command1.CommandText = @"
                     INSERT INTO HealthStatusLog (Id, Name, Status, Timestamp)
-                    VALUES ($id, $name, $status, $timestamp)";
-                command1.Parameters.AddWithValue("$id", id);
-                command1.Parameters.AddWithValue("$name", name);
-                command1.Parameters.AddWithValue("$status", status);
-                command1.Parameters.AddWithValue("$timestamp", timestamp);
+                    VALUES (@id, @name, @status, @timestamp)";
+                command1.Parameters.AddWithValue("@id", id);
+                command1.Parameters.AddWithValue("@name", name);
+                command1.Parameters.AddWithValue("@status", status);
+                command1.Parameters.AddWithValue("@timestamp", timestamp);
                 await command1.ExecuteNonQueryAsync();
             }
 
@@ -68,7 +69,7 @@ namespace HealthCheckAPI.Services
                 command2.Parameters.AddWithValue("@appId", id);
                 command2.Parameters.AddWithValue("@name", name);
                 command2.Parameters.AddWithValue("@status", status);
-                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow);
                 await command2.ExecuteNonQueryAsync();
             }
         }

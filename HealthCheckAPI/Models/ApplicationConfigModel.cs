@@ -4,7 +4,7 @@
     {
         public string Id { get; set; }
         public string Name { get; set; }
-        public string Type { get; set; } // "WebApp" ή "Database"
+        public string Type { get; set; } // WebAp ή Database
 
         // Για WebApp
         public string HealthCheckUrl { get; set; }

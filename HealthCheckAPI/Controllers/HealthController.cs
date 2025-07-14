@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace HealthCheckAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase

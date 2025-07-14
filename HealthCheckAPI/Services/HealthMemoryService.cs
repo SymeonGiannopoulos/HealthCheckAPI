@@ -1,9 +1,9 @@
 ﻿using HealthCheckAPI.Models;
 using HealthCheckAPI.Interface;
 
-namespace HealthCheckAPI
+namespace HealthCheckAPI.Services
 {
-    public class HealthMemory : IHealthMemory
+    public class HealthMemoryService : IHealthMemory
     {
         public Dictionary<string, string> StatusMap { get; } = new();
     }

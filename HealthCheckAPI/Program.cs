@@ -1,5 +1,4 @@
-﻿using HealthCheckAPI;
-using HealthCheckAPI.Controllers;
+﻿using HealthCheckAPI.Controllers;
 using HealthCheckAPI.Interface;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
@@ -23,7 +22,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<IPasswordHasher<UserModel>, PasswordHasher<UserModel>>();
 builder.Services.AddScoped<IHealthService, HealthService>();
-builder.Services.AddSingleton<IHealthMemory, HealthMemory>();
+builder.Services.AddSingleton<IHealthMemory, HealthMemoryService>();
 builder.Services.AddTransient<Email>();
 builder.Services.AddHostedService<HealthService>();
 builder.Services.AddScoped<UserService>();

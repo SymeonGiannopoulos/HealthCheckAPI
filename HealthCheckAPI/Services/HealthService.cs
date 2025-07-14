@@ -1,19 +1,147 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using HealthCheckAPI.Interface;
+using HealthCheckAPI.Models;
+using HealthCheckAPI.Notifications;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Data.SqlClient;  // Αλλαγή εδώ
-using System.Data;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HealthCheckAPI.Services
 {
-    public class HealthService : IHealthService
+    public class HealthService : BackgroundService, IHealthService
     {
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly IConfiguration _config;
 
-        public HealthService(IConfiguration config)
+        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config)
         {
+            _scopeFactory = scopeFactory;
             _config = config;
+        }
+
+        public async Task<List<object>> CheckAllInternalAsync()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+            var emailSender = scope.ServiceProvider.GetRequiredService<Email>();
+            var memory = scope.ServiceProvider.GetRequiredService<IHealthMemory>();
+
+            var applications = new List<ApplicationConfigModel>();
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                using var command = new SqlCommand("SELECT * FROM Applications", connection);
+                using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    applications.Add(new ApplicationConfigModel
+                    {
+                        Id = reader["Id"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
+                        ConnectionString = reader["ConnectionString"]?.ToString(),
+                        Query = reader["Query"]?.ToString()
+                    });
+                }
+            }
+
+            var results = new List<object>();
+            var greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
+            var greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
+
+            foreach (var app in applications)
+            {
+                string status = "Healthy";
+
+                if (app.Type == "WebApp")
+                {
+                    try
+                    {
+                        var client = httpClientFactory.CreateClient();
+                        var response = await client.GetAsync(app.HealthCheckUrl);
+                        if (!response.IsSuccessStatusCode)
+                            status = "Unhealthy";
+                    }
+                    catch
+                    {
+                        status = "Unhealthy";
+                    }
+                }
+                else if (app.Type == "Database")
+                {
+                    try
+                    {
+                        using var connection = new SqlConnection(app.ConnectionString);
+                        await connection.OpenAsync();
+                        using var command = connection.CreateCommand();
+                        command.CommandText = app.Query;
+                        await command.ExecuteScalarAsync();
+                    }
+                    catch
+                    {
+                        status = "Unhealthy";
+                    }
+                }
+
+                memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
+
+                if (status == "Healthy")
+                {
+                    if (previousStatus != "Healthy")
+                    {
+                        using var connection = new SqlConnection(connectionString);
+                        await connection.OpenAsync();
+
+                        var command = connection.CreateCommand();
+                        command.CommandText = "DELETE FROM HealthStatusLog WHERE Id = @id";
+                        command.Parameters.AddWithValue("@id", app.Id);
+                        await command.ExecuteNonQueryAsync();
+
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        {
+                            emailSender.SendEmail(email,
+                                $"Update: {app.Name} is Healthy",
+                                $"The application {app.Name} is healthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
+                        }
+                    }
+                }
+                else
+                {
+                    if (previousStatus != "Unhealthy")
+                    {
+                        await LogUnhealthyStatusAsync(app.Id, app.Name, status);
+
+                        var userEmails = await GetAllUserEmailsAsync();
+                        foreach (var email in userEmails)
+                        {
+                            emailSender.SendEmail(email,
+                                $"Alert: {app.Name} is Unhealthy",
+                                $"The application {app.Name} is unhealthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
+                        }
+                    }
+                }
+
+                memory.StatusMap[app.Id] = status;
+
+                results.Add(new
+                {
+                    Id = app.Id,
+                    Name = app.Name,
+                    Status = status
+                });
+            }
+
+            return results;
         }
 
         public async Task<List<string>> GetAllUserEmailsAsync()
@@ -30,8 +158,7 @@ namespace HealthCheckAPI.Services
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
-                var email = reader.GetString(0);
-                emails.Add(email);
+                emails.Add(reader.GetString(0));
             }
 
             return emails;
@@ -46,8 +173,6 @@ namespace HealthCheckAPI.Services
 
             TimeZoneInfo greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
             DateTime greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-         
-            DateTime timestamp = greeceTime;
 
             using (var command1 = connection.CreateCommand())
             {
@@ -57,7 +182,7 @@ namespace HealthCheckAPI.Services
                 command1.Parameters.AddWithValue("@id", id);
                 command1.Parameters.AddWithValue("@name", name);
                 command1.Parameters.AddWithValue("@status", status);
-                command1.Parameters.AddWithValue("@timestamp", timestamp);
+                command1.Parameters.AddWithValue("@timestamp", greeceTime);
                 await command1.ExecuteNonQueryAsync();
             }
 
@@ -71,6 +196,15 @@ namespace HealthCheckAPI.Services
                 command2.Parameters.AddWithValue("@status", status);
                 command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow);
                 await command2.ExecuteNonQueryAsync();
+            }
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await CheckAllInternalAsync();
+                await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
             }
         }
     }

@@ -1,21 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Data.Sqlite;
-using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using HealthCheckAPI.Notifications;
-using System.Data;
-using System.Data.SqlClient; 
+﻿using HealthCheckAPI.Interface;
 using HealthCheckAPI.Models;
-using Microsoft.AspNetCore.Authorization;
-using HealthCheckAPI.Interface;
+using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase
@@ -26,7 +21,12 @@ namespace HealthCheckAPI.Controllers
         private readonly IHealthMemory _memory;
         private readonly IHealthService _healthService;
 
-        public HealthController(IConfiguration config, IHttpClientFactory httpClientFactory, Email emailSender, IHealthMemory memory, IHealthService healthService)
+        public HealthController(
+            IConfiguration config,
+            IHttpClientFactory httpClientFactory,
+            Email emailSender,
+            IHealthMemory memory,
+            IHealthService healthService)
         {
             _config = config;
             _httpClientFactory = httpClientFactory;
@@ -38,7 +38,7 @@ namespace HealthCheckAPI.Controllers
         [HttpGet("check-all")]
         public async Task<IActionResult> CheckAll()
         {
-            var results = await CheckAllInternalAsync();
+            var results = await _healthService.CheckAllInternalAsync();
             return Ok(results);
         }
 
@@ -66,15 +66,15 @@ namespace HealthCheckAPI.Controllers
                     else
                     {
                         await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-
                         var userEmails = await _healthService.GetAllUserEmailsAsync();
+
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
-                        email,
-                        $"Alert: {name} is Unhealthy",
-                        $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
-                        );
+                                email,
+                                $"Alert: {name} is Unhealthy",
+                                $"The application {name} is unhealthy as of {GetGreekTime()} (Greece time)."
+                            );
                         }
 
                         return Ok(new { Id = id, Name = name, Status = "Unhealthy" });
@@ -90,11 +90,10 @@ namespace HealthCheckAPI.Controllers
             {
                 try
                 {
-                    // Changed to SQL Server from SQLite
-                    using var connection = new SqlConnection(app["ConnectionString"]); // Changed to SQL Server
+                    using var connection = new SqlConnection(app["ConnectionString"]);
                     await connection.OpenAsync();
 
-                    using var command = new SqlCommand(app["Query"], connection); // Changed to SQL Server
+                    using var command = new SqlCommand(app["Query"], connection);
                     var result = await command.ExecuteScalarAsync();
 
                     if (result != null)
@@ -104,16 +103,18 @@ namespace HealthCheckAPI.Controllers
                     else
                     {
                         await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-
                         var userEmails = await _healthService.GetAllUserEmailsAsync();
+
                         foreach (var email in userEmails)
                         {
                             _emailSender.SendEmail(
-                        email,
-                        $"Alert: {name} is Unhealthy",
-                        $"The application {name} is unhealthy as of {TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time")):dd/MM/yyyy HH:mm:ss} (Greece time)."
-);
+                                email,
+                                $"Alert: {name} is Unhealthy",
+                                $"The application {name} is unhealthy as of {GetGreekTime()} (Greece time)."
+                            );
                         }
+
+                        return Ok(new { Id = id, Name = name, Status = "Unhealthy" });
                     }
                 }
                 catch (Exception ex)
@@ -126,107 +127,11 @@ namespace HealthCheckAPI.Controllers
             return BadRequest("Unsupported application type");
         }
 
-        [ApiExplorerSettings(IgnoreApi = true)]
-        [HttpGet("check")]
-        public async Task<List<object>> CheckAllInternalAsync()
+        private string GetGreekTime()
         {
-            var applications = _config.GetSection("Applications").Get<List<ApplicationConfigModel>>();
-            var results = new List<object>();
-
             var greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
             var greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-
-            foreach (var app in applications)
-            {
-                string status = "Healthy";
-
-                if (app.Type == "WebApp")
-                {
-                    try
-                    {
-                        var client = _httpClientFactory.CreateClient();
-                        var response = await client.GetAsync(app.HealthCheckUrl);
-                        if (!response.IsSuccessStatusCode)
-                            status = "Unhealthy";
-                    }
-                    catch
-                    {
-                        status = "Unhealthy";
-                    }
-                }
-                else if (app.Type == "Database")
-                {
-                    try
-                    {
-                        // Changed to SQL Server from SQLite
-                        using var connection = new SqlConnection(app.ConnectionString); 
-                        await connection.OpenAsync();
-                        using var command = connection.CreateCommand();
-                        command.CommandText = app.Query;
-                        await command.ExecuteScalarAsync();
-                    }
-                    catch
-                    {
-                        status = "Unhealthy";
-                    }
-                }
-
-                if (status == "Healthy")
-                {
-                    _memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
-
-                    if (previousStatus != "Healthy")
-                    {
-                        var connectionString = _config.GetConnectionString("SqlServerConnection"); 
-                        using var connection = new SqlConnection(connectionString); 
-                        await connection.OpenAsync();
-
-                        var command = connection.CreateCommand();
-                        command.CommandText = "DELETE FROM HealthStatusLog WHERE Id = @id";
-                        command.Parameters.AddWithValue("@id", app.Id);
-                        await command.ExecuteNonQueryAsync();
-
-                        var userEmails = await _healthService.GetAllUserEmailsAsync();
-                        foreach (var email in userEmails)
-                        {
-                            _emailSender.SendEmail(
-                            email,
-                            $"Update: {app.Name} is Healthy",
-                            $"The application {app.Name} is healthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
-                        }
-                    }
-
-                }
-                else
-                {
-                    _memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
-
-                    if (previousStatus != "Unhealthy")
-                    {
-                        await _healthService.LogUnhealthyStatusAsync(app.Id, app.Name, status);
-
-                        var userEmails = await _healthService.GetAllUserEmailsAsync();
-                        foreach (var email in userEmails)
-                        {
-                            _emailSender.SendEmail(
-                        email,
-                        $"Alert: {app.Name} is Unealthy",
-                        $"The application {app.Name} is unhealthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time).");
-                        }
-                    }
-                }
-
-                _memory.StatusMap[app.Id] = status;
-
-                results.Add(new
-                {
-                    Id = app.Id,
-                    Name = app.Name,
-                    Status = status
-                });
-            }
-
-            return results;
+            return greeceTime.ToString("dd/MM/yyyy HH:mm:ss");
         }
     }
 }

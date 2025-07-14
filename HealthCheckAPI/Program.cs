@@ -13,9 +13,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ========================
-// Services Registration
-// ========================
+
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -28,12 +26,10 @@ builder.Services.AddHostedService<HealthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<JwtService>();
 
-// Optional (not usually required)
+
 builder.Services.AddTransient<HealthController>();
 
-// ========================
-// JWT Configuration
-// ========================
+
 var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
 builder.Services.Configure<JwtSettingsModel>(jwtSettingsSection);
 
@@ -60,9 +56,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ========================
-// Swagger Configuration
-// ========================
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "HealthCheck API", Version = "v1" });
@@ -74,7 +68,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter your valid JWT token.\n\nExample: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        Description = "Enter your valid JWT token."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -89,9 +83,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ========================
-// SQL Table Creation
-// ========================
+
 using (var connection = new SqlConnection(builder.Configuration.GetConnectionString("SqlServerConnection")))
 {
     connection.Open();
@@ -149,9 +141,7 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
     command.ExecuteNonQuery();
 }
 
-// ========================
-// App Pipeline
-// ========================
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -160,7 +150,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection(); // Uncomment if you use HTTPS
+app.UseHttpsRedirection(); 
 
 app.UseAuthentication();
 app.UseAuthorization();

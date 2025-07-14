@@ -2,6 +2,7 @@
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System;

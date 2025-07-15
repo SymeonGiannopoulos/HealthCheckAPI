@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ErrorController : ControllerBase
@@ -74,8 +74,8 @@ namespace HealthCheckAPI.Controllers
             return Ok(errorLogs);
         }
 
-        [HttpGet("logs/id/{id}")]
-        public async Task<IActionResult> GetErrorLogsById(string id)
+        [HttpGet("logs/app/{appId}")]
+        public async Task<IActionResult> GetErrorLogsByAppId(string appId)
         {
             var errorLogs = new List<object>();
             var connectionString = _configuration.GetConnectionString("SqlServerConnection");
@@ -83,8 +83,8 @@ namespace HealthCheckAPI.Controllers
             using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
-            var command = new SqlCommand("SELECT * FROM ErrorLogs WHERE Id = @id ORDER BY Timestamp DESC", connection);
-            command.Parameters.AddWithValue("@id", id);
+            var command = new SqlCommand("SELECT * FROM ErrorLogs WHERE AppId = @appId ORDER BY Timestamp DESC", connection);
+            command.Parameters.AddWithValue("@appId", appId);
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
@@ -101,6 +101,26 @@ namespace HealthCheckAPI.Controllers
 
             return Ok(errorLogs);
         }
+
+        [HttpDelete("clear")]
+        public async Task<IActionResult> ClearAllErrors()
+        {
+            var connectionString = _configuration.GetConnectionString("SqlServerConnection");
+
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            var command = new SqlCommand(@"
+        DELETE FROM HealthStatusLog;
+        DELETE FROM ErrorLogs;
+    ", connection);
+
+            var rowsAffected = await command.ExecuteNonQueryAsync();
+
+            return Ok(new { message = "All errors cleared.", rowsAffected });
+        }
+
+
 
     }
 }

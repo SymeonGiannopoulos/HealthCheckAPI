@@ -1,9 +1,11 @@
 ﻿using HealthCheckAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 
 namespace HealthCheckAPI.Controllers
 {
+    //[Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ApplicationController : ControllerBase

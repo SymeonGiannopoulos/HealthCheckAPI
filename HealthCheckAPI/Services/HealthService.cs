@@ -17,11 +17,17 @@ namespace HealthCheckAPI.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IConfiguration _config;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IHealthMemory _memory;
+        private readonly Email _emailSender;
 
-        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config)
+        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender)
         {
             _scopeFactory = scopeFactory;
             _config = config;
+            _httpClientFactory = httpClientFactory;
+            _memory = memory;
+            _emailSender = emailSender;
         }
 
         public async Task<List<object>> CheckAllInternalAsync()
@@ -207,5 +213,117 @@ namespace HealthCheckAPI.Services
                 await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
             }
         }
+
+        public async Task<object> CheckSingleAppAsync(string id)
+        {
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
+
+            ApplicationConfigModel app = null;
+
+            
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                using var command = new SqlCommand("SELECT * FROM Applications WHERE Id = @id", connection);
+                command.Parameters.AddWithValue("@id", id);
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    app = new ApplicationConfigModel
+                    {
+                        Id = reader["Id"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
+                        ConnectionString = reader["ConnectionString"]?.ToString(),
+                        Query = reader["Query"]?.ToString()
+                    };
+                }
+            }
+
+            if (app == null) return null;
+
+            string status = "Healthy";
+            var greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
+            var greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
+
+            try
+            {
+                if (app.Type == "WebApp")
+                {
+                    var client = _httpClientFactory.CreateClient();
+                    var response = await client.GetAsync(app.HealthCheckUrl);
+                    if (!response.IsSuccessStatusCode) status = "Unhealthy";
+                }
+                else if (app.Type == "Database")
+                {
+                    using var dbConnection = new SqlConnection(app.ConnectionString);
+                    await dbConnection.OpenAsync();
+
+                    using var dbCommand = new SqlCommand(app.Query, dbConnection);
+                    var result = await dbCommand.ExecuteScalarAsync();
+                    if (result == null) status = "Unhealthy";
+                }
+            }
+            catch
+            {
+                status = "Unhealthy";
+            }
+
+            _memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
+
+            if (status == "Healthy")
+            {
+                if (previousStatus != "Healthy")
+                {
+                    using var conn = new SqlConnection(connectionString);
+                    await conn.OpenAsync();
+
+                    var clearCmd = new SqlCommand("DELETE FROM HealthStatusLog WHERE Id = @id", conn);
+                    clearCmd.Parameters.AddWithValue("@id", app.Id);
+                    await clearCmd.ExecuteNonQueryAsync();
+
+                    var emails = await GetAllUserEmailsAsync();
+                    foreach (var email in emails)
+                    {
+                        _emailSender.SendEmail(
+                            email,
+                            $"Update: {app.Name} is Healthy",
+                            $"The application {app.Name} is healthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time)."
+                        );
+                    }
+                }
+            }
+            else
+            {
+                if (previousStatus != "Unhealthy")
+                {
+                    await LogUnhealthyStatusAsync(app.Id, app.Name, status);
+
+                    var emails = await GetAllUserEmailsAsync();
+                    foreach (var email in emails)
+                    {
+                        _emailSender.SendEmail(
+                            email,
+                            $"Alert: {app.Name} is Unhealthy",
+                            $"The application {app.Name} is unhealthy as of {greeceTime:dd/MM/yyyy HH:mm:ss} (Greece time)."
+                        );
+                    }
+                }
+            }
+
+            _memory.StatusMap[app.Id] = status;
+
+            return new
+            {
+                Id = app.Id,
+                Name = app.Name,
+                Status = status
+            };
+        }
+
+
     }
 }

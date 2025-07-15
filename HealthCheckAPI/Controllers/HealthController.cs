@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace HealthCheckAPI.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase
@@ -47,93 +47,16 @@ namespace HealthCheckAPI.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetHealth(string id)
         {
-            var apps = _config.GetSection("Applications").GetChildren();
-            var app = apps.FirstOrDefault(a => a["Id"] == id);
-            if (app == null) return NotFound();
-
-            var type = app["Type"];
-            var name = app["Name"];
-
-            if (type == "WebApp")
-            {
-                try
-                {
-                    var client = _httpClientFactory.CreateClient();
-                    var response = await client.GetAsync(app["HealthCheckUrl"]);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        return Ok(new { Id = id, Name = name, Status = "Healthy" });
-                    }
-                    else
-                    {
-                        await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-                        var userEmails = await _healthService.GetAllUserEmailsAsync();
-
-                        foreach (var email in userEmails)
-                        {
-                            _emailSender.SendEmail(
-                                email,
-                                $"Alert: {name} is Unhealthy",
-                                $"The application {name} is unhealthy as of {GetGreekTime()} (Greece time)."
-                            );
-                        }
-
-                        return Ok(new { Id = id, Name = name, Status = "Unhealthy" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-                    return Ok(new { Id = id, Name = name, Status = "Unhealthy", Message = ex.Message });
-                }
-            }
-            else if (type == "Database")
-            {
-                try
-                {
-                    using var connection = new SqlConnection(app["ConnectionString"]);
-                    await connection.OpenAsync();
-
-                    using var command = new SqlCommand(app["Query"], connection);
-                    var result = await command.ExecuteScalarAsync();
-
-                    if (result != null)
-                    {
-                        return Ok(new { Id = id, Name = name, Status = "Healthy" });
-                    }
-                    else
-                    {
-                        await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-                        var userEmails = await _healthService.GetAllUserEmailsAsync();
-
-                        foreach (var email in userEmails)
-                        {
-                            _emailSender.SendEmail(
-                                email,
-                                $"Alert: {name} is Unhealthy",
-                                $"The application {name} is unhealthy as of {GetGreekTime()} (Greece time)."
-                            );
-                        }
-
-                        return Ok(new { Id = id, Name = name, Status = "Unhealthy" });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await _healthService.LogUnhealthyStatusAsync(id, name, "Unhealthy");
-                    return Ok(new { Id = id, Name = name, Status = "Unhealthy", Message = ex.Message });
-                }
-            }
-
-            return BadRequest("Unsupported application type");
+            var result = await _healthService.CheckSingleAppAsync(id);
+            if (result == null) return NotFound($"No application with id '{id}' found.");
+            return Ok(result);
         }
+        
+        
+       
 
-        private string GetGreekTime()
-        {
-            var greeceTimeZone = TimeZoneInfo.FindSystemTimeZoneById("GTB Standard Time");
-            var greeceTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, greeceTimeZone);
-            return greeceTime.ToString("dd/MM/yyyy HH:mm:ss");
-        }
+
+
+        
     }
 }

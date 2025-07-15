@@ -10,6 +10,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -137,6 +138,17 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
                 ConnectionString NVARCHAR(MAX),
                 Query NVARCHAR(MAX)
             );
+        END";
+    command.ExecuteNonQuery();
+
+    command.CommandText = @"
+        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'ApplicationStatusState')
+        BEGIN
+        CREATE TABLE ApplicationStatusState(
+            Id NVARCHAR(50) PRIMARY KEY,
+            PreviousStatus NVARCHAR(50),
+            LastChecked DATETIME
+         );
         END";
     command.ExecuteNonQuery();
 }

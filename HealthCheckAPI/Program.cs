@@ -4,11 +4,14 @@ using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System;
 using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -151,6 +154,20 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
          );
         END";
     command.ExecuteNonQuery();
+
+    command.CommandText = @"
+        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'AppStatusLogs')
+        BEGIN
+        CREATE TABLE AppStatusLogs(
+            Id INT IDENTITY(1, 1) PRIMARY KEY,
+            AppId NVARCHAR(50) NOT NULL,
+            Name NVARCHAR(100) NOT NULL,
+            Status NVARCHAR(50), 
+            Timestamp DATETIME NOT NULL
+        );
+        END";
+    command.ExecuteNonQuery();
+
 }
 
 

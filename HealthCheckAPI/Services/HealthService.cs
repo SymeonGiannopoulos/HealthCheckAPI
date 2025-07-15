@@ -98,6 +98,22 @@ namespace HealthCheckAPI.Services
                     }
                 }
 
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var insertStatusCommand = new SqlCommand(@"
+            INSERT INTO AppStatusLogs (AppId, Name, Status, Timestamp)
+            VALUES (@AppId, @Name, @Status, @Timestamp)", connection);
+
+                    insertStatusCommand.Parameters.AddWithValue("@AppId", app.Id);
+                    insertStatusCommand.Parameters.AddWithValue("@Name", app.Name);
+                    insertStatusCommand.Parameters.AddWithValue("@Status", status);
+                    insertStatusCommand.Parameters.AddWithValue("@Timestamp", DateTime.UtcNow);
+
+                    await insertStatusCommand.ExecuteNonQueryAsync();
+                }
+
                 memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
 
                 if (status == "Healthy")

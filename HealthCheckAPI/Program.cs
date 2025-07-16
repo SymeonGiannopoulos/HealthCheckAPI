@@ -1,6 +1,7 @@
 ﻿using HealthCheckAPI.Controllers;
 using HealthCheckAPI.Interface;
 using HealthCheckAPI.Interface;
+using HealthCheckAPI.Interfaces;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
 using HealthCheckAPI.Repositories;
@@ -33,6 +34,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IAppStatusLogRepository, AppStatusLogRepository>();
 builder.Services.AddScoped<IAppStatisticsService, AppStatisticsService>();
+builder.Services.AddSingleton<IRetryService, RetryService>();
 
 
 builder.Services.AddTransient<HealthController>();

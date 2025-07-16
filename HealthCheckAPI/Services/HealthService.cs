@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using HealthCheckAPI.Interface;
+using HealthCheckAPI.Interfaces;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
 using Microsoft.EntityFrameworkCore;
@@ -22,14 +23,18 @@ namespace HealthCheckAPI.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IHealthMemory _memory;
         private readonly Email _emailSender;
+        private readonly IRetryService _retryService;
 
-        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender)
+
+        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender, IRetryService retryService)
         {
             _scopeFactory = scopeFactory;
             _config = config;
             _httpClientFactory = httpClientFactory;
             _memory = memory;
             _emailSender = emailSender;
+            _retryService = retryService;
+
         }
 
         public async Task<List<object>> CheckAllInternalAsync()
@@ -75,7 +80,12 @@ namespace HealthCheckAPI.Services
                     try
                     {
                         var client = httpClientFactory.CreateClient();
-                        var response = await client.GetAsync(app.HealthCheckUrl);
+
+                        var response = await _retryService.ExecuteWithRetryAsync(async () =>
+                        {
+                            return await client.GetAsync(app.HealthCheckUrl);
+                        });
+
                         if (!response.IsSuccessStatusCode)
                             status = "Unhealthy";
                     }
@@ -88,11 +98,18 @@ namespace HealthCheckAPI.Services
                 {
                     try
                     {
-                        using var connection = new SqlConnection(app.ConnectionString);
-                        await connection.OpenAsync();
-                        using var command = connection.CreateCommand();
-                        command.CommandText = app.Query;
-                        await command.ExecuteScalarAsync();
+                        var result = await _retryService.ExecuteWithRetryAsync(async () =>
+                        {
+                            using var connection = new SqlConnection(app.ConnectionString);
+                            await connection.OpenAsync();
+
+                            using var command = connection.CreateCommand();
+                            command.CommandText = app.Query;
+                            return await command.ExecuteScalarAsync();
+                        });
+
+                        if (result == null)
+                            status = "Unhealthy";
                     }
                     catch
                     {

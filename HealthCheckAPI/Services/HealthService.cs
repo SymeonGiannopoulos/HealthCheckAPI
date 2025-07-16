@@ -1,6 +1,8 @@
-﻿using HealthCheckAPI.Interface;
+﻿using Dapper;
+using HealthCheckAPI.Interface;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -98,21 +100,20 @@ namespace HealthCheckAPI.Services
                     }
                 }
 
-                using (var connection = new SqlConnection(connectionString))
+
+                using (var logConnection = new SqlConnection(connectionString))
                 {
-                    await connection.OpenAsync();
-
-                    var insertStatusCommand = new SqlCommand(@"
-            INSERT INTO AppStatusLogs (AppId, Name, Status, Timestamp)
-            VALUES (@AppId, @Name, @Status, @Timestamp)", connection);
-
-                    insertStatusCommand.Parameters.AddWithValue("@AppId", app.Id);
-                    insertStatusCommand.Parameters.AddWithValue("@Name", app.Name);
-                    insertStatusCommand.Parameters.AddWithValue("@Status", status);
-                    insertStatusCommand.Parameters.AddWithValue("@Timestamp", DateTime.UtcNow);
-
-                    await insertStatusCommand.ExecuteNonQueryAsync();
+                    await logConnection.OpenAsync();
+                    var sql = "INSERT INTO AppStatusLog (AppId, Status, CheckedAt) VALUES (@AppId, @Status, @CheckedAt)";
+                    await logConnection.ExecuteAsync(sql, new
+                    {
+                        AppId = app.Id,
+                        Status = status == "Healthy",
+                        CheckedAt = DateTime.UtcNow
+                    });
                 }
+
+
 
                 memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
 
@@ -216,7 +217,7 @@ namespace HealthCheckAPI.Services
                 command2.Parameters.AddWithValue("@appId", id);
                 command2.Parameters.AddWithValue("@name", name);
                 command2.Parameters.AddWithValue("@status", status);
-                command2.Parameters.AddWithValue("@timestamp", DateTime.UtcNow);
+                command2.Parameters.AddWithValue("@timestamp", greeceTime);
                 await command2.ExecuteNonQueryAsync();
             }
         }
@@ -339,6 +340,10 @@ namespace HealthCheckAPI.Services
                 Status = status
             };
         }
+
+       
+
+
 
 
     }

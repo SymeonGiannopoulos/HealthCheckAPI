@@ -1,7 +1,9 @@
 ﻿using HealthCheckAPI.Controllers;
 using HealthCheckAPI.Interface;
+using HealthCheckAPI.Interface;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
+using HealthCheckAPI.Repositories;
 using HealthCheckAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -29,6 +31,8 @@ builder.Services.AddTransient<Email>();
 builder.Services.AddHostedService<HealthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<IAppStatusLogRepository, AppStatusLogRepository>();
+builder.Services.AddScoped<IAppStatisticsService, AppStatisticsService>();
 
 
 builder.Services.AddTransient<HealthController>();
@@ -145,26 +149,14 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
     command.ExecuteNonQuery();
 
     command.CommandText = @"
-        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'ApplicationStatusState')
+        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'AppStatusLog')
         BEGIN
-        CREATE TABLE ApplicationStatusState(
-            Id NVARCHAR(50) PRIMARY KEY,
-            PreviousStatus NVARCHAR(50),
-            LastChecked DATETIME
-         );
-        END";
-    command.ExecuteNonQuery();
-
-    command.CommandText = @"
-        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'AppStatusLogs')
-        BEGIN
-        CREATE TABLE AppStatusLogs(
-            Id INT IDENTITY(1, 1) PRIMARY KEY,
-            AppId NVARCHAR(50) NOT NULL,
-            Name NVARCHAR(100) NOT NULL,
-            Status NVARCHAR(50), 
-            Timestamp DATETIME NOT NULL
-        );
+        CREATE TABLE AppStatusLog (
+            Id INT IDENTITY(1,1) PRIMARY KEY,
+            AppId NVARCHAR(100) NOT NULL,
+            Status BIT NOT NULL, 
+            CheckedAt DATETIME NOT NULL
+);
         END";
     command.ExecuteNonQuery();
 

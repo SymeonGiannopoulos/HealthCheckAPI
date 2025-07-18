@@ -1,4 +1,5 @@
-﻿using HealthCheckAPI.Controllers;
+﻿using AspNetCoreRateLimit;
+using HealthCheckAPI.Controllers;
 using HealthCheckAPI.Interface;
 using HealthCheckAPI.Interface;
 using HealthCheckAPI.Interfaces;
@@ -14,6 +15,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Prometheus;
 using System;
 using System.Text;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -35,6 +37,17 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IAppStatusLogRepository, AppStatusLogRepository>();
 builder.Services.AddScoped<IAppStatisticsService, AppStatisticsService>();
 builder.Services.AddSingleton<IRetryService, RetryService>();
+builder.Services.AddHealthChecks();
+
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddInMemoryRateLimiting();
+
+
 
 
 builder.Services.AddTransient<HealthController>();
@@ -172,6 +185,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseRouting();
+app.UseIpRateLimiting(); 
+
+app.UseHttpMetrics(); 
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapMetrics(); 
+});
+
 
 app.UseHttpsRedirection(); 
 

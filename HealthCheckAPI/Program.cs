@@ -47,8 +47,12 @@ builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrateg
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 builder.Services.AddInMemoryRateLimiting();
 
+<<<<<<< HEAD
 builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<ChatQueryService>();
+=======
+
+>>>>>>> 1f513b0 (Done)
 
 
 builder.Services.AddTransient<HealthController>();

@@ -4,8 +4,8 @@
     {
         public string AppId { get; set; } = string.Empty;
         public double AverageDowntimeMinutes { get; set; }
-        public int DowntimesToday { get; set; }
-        public int TotalDowntimeToday { get; set; }
-        public double AvailabilityPercentToday { get; set; }
+        public int DowntimesCount { get; set; }
+        public int TotalDowntime { get; set; }
+        public double AvailabilityPercent { get; set; }
     }
 }

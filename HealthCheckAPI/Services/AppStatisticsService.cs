@@ -14,24 +14,24 @@ namespace HealthCheckAPI.Services
 
         public async Task<AppStatisticsDto?> GetStatisticsAsync(string appId)
         {
-            var from = DateTime.Today;
-            var logs = (await _logRepository.GetLogsByAppIdAsync(appId, from))
-                .OrderBy(l => l.CheckedAt)
-                .ToList();
+            // Παίρνουμε ΟΛΑ τα logs χωρίς χρονικό περιορισμό
+            var logs = (await _logRepository.GetLogsByAppIdAsync(appId))
+           .OrderBy(l => l.CheckedAt)
+           .ToList();
+
 
             if (!logs.Any())
                 return null;
 
             int totalDowntime = 0;
             int downtimeCount = 0;
-            int currentDowntime = 0;
             bool inDowntime = false;
 
-            for (int i = 0; i < logs.Count; i++)
+            foreach (var log in logs)
             {
-                if (!logs[i].Status)
+                if (!log.Status)
                 {
-                    currentDowntime += 1;
+                    totalDowntime++;
 
                     if (!inDowntime)
                     {
@@ -43,19 +43,17 @@ namespace HealthCheckAPI.Services
                 {
                     inDowntime = false;
                 }
-
-                totalDowntime += logs[i].Status ? 0 : 1;
             }
 
-            double availabilityPercent = 100.0 * (logs.Count - totalDowntime) / (logs.Count);
+            double availabilityPercent = 100.0 * (logs.Count - totalDowntime) / logs.Count;
 
             return new AppStatisticsDto
             {
                 AppId = appId,
                 AverageDowntimeMinutes = downtimeCount > 0 ? (double)totalDowntime / downtimeCount : 0,
-                DowntimesToday = downtimeCount,
-                TotalDowntimeToday = totalDowntime,
-                AvailabilityPercentToday = Math.Round(availabilityPercent, 2)
+                DowntimesCount = downtimeCount,        
+                TotalDowntime = totalDowntime,    
+                AvailabilityPercent = Math.Round(availabilityPercent, 2)  
             };
         }
     }

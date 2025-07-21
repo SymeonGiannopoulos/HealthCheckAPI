@@ -1,23 +1,35 @@
-﻿using HealthCheckAPI.Services;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using HealthCheckAPI.Services;
+using System.Threading.Tasks;
 
-[ApiController]
-[Route("api/[controller]")]
-public class ChatController : ControllerBase
+namespace HealthCheckAPI.Controllers
 {
-    private readonly AIService _aiService;
-
-    public ChatController()
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ChatController : ControllerBase
     {
-        // Βάλε εδώ το πραγματικό σου API key (ή καλύτερα από config)
-        string openAiApiKey = "your_openai_api_key_here";
-        _aiService = new AIService(openAiApiKey);
+        private readonly ChatQueryService _chatQueryService;
+
+        public ChatController(ChatQueryService chatQueryService)
+        {
+            _chatQueryService = chatQueryService;
+        }
+
+        [HttpPost("ask")]
+        public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Question))
+            {
+                return BadRequest("Το πεδίο 'Question' είναι υποχρεωτικό.");
+            }
+
+            var answer = await _chatQueryService.GetAnswerAsync(request.Question);
+            return Ok(new { Answer = answer });
+        }
     }
 
-    [HttpGet("ask")]
-    public async Task<IActionResult> Ask(string question)
+    public class QuestionRequest
     {
-        var answer = await _aiService.AskChatbot(question);
-        return Ok(new { answer });
+        public string Question { get; set; }
     }
 }

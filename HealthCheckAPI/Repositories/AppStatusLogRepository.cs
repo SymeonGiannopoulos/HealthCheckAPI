@@ -16,11 +16,18 @@ namespace HealthCheckAPI.Repositories
             _connectionString = _configuration.GetConnectionString("SqlServerConnection");
         }
 
-        public async Task<IEnumerable<AppStatusLogModel>> GetLogsByAppIdAsync(string appId, DateTime from)
+        public async Task<IEnumerable<AppStatusLogModel>> GetLogsByAppIdAsync(string appId)
         {
             using var connection = new SqlConnection(_connectionString);
-            var query = @"SELECT * FROM AppStatusLog 
-                          WHERE AppId = @AppId AND CheckedAt >= @From";
+            var query = @"SELECT * FROM AppStatusLog WHERE AppId = @AppId";
+            var logs = await connection.QueryAsync<AppStatusLogModel>(query, new { AppId = appId });
+            return logs.AsList();
+        }
+
+        public async Task<IEnumerable<AppStatusLogModel>> GetLogsByAppIdFromDateAsync(string appId, DateTime from)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var query = @"SELECT * FROM AppStatusLog WHERE AppId = @AppId AND CheckedAt >= @From";
             var logs = await connection.QueryAsync<AppStatusLogModel>(query, new { AppId = appId, From = from });
             return logs.AsList();
         }
@@ -28,9 +35,9 @@ namespace HealthCheckAPI.Repositories
         public async Task AddLogAsync(AppStatusLogModel log)
         {
             using var connection = new SqlConnection(_connectionString);
-            var query = @"INSERT INTO AppStatusLog (AppId, Status, CheckedAt)
-                          VALUES (@AppId, @Status, @CheckedAt)";
+            var query = @"INSERT INTO AppStatusLog (AppId, Status, CheckedAt) VALUES (@AppId, @Status, @CheckedAt)";
             await connection.ExecuteAsync(query, log);
         }
+
     }
 }

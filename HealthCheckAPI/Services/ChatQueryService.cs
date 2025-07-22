@@ -107,8 +107,6 @@ namespace HealthCheckAPI.Services
         }
 
 
-
-
         private bool TryExtractDate(string input, out DateTime date)
         {
             var match = Regex.Match(input, @"\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b");

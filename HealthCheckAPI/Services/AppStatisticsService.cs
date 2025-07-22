@@ -14,7 +14,7 @@ namespace HealthCheckAPI.Services
 
         public async Task<AppStatisticsDto?> GetStatisticsAsync(string appId)
         {
-            // Παίρνουμε ΟΛΑ τα logs χωρίς χρονικό περιορισμό
+            
             var logs = (await _logRepository.GetLogsByAppIdAsync(appId))
            .OrderBy(l => l.CheckedAt)
            .ToList();

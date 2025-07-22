@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Filterrepo
+git-filter-repo.py
+git-filter-repo.txt

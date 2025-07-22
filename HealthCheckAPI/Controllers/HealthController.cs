@@ -37,26 +37,21 @@ namespace HealthCheckAPI.Controllers
             _healthService = healthService;
         }
 
-        [HttpGet("check-all")]
-        public async Task<IActionResult> CheckAll()
+        [HttpGet("check-all-health")]
+        public async Task<IActionResult> CheckAllHealth()
         {
-            var results = await _healthService.CheckAllInternalAsync();
+            var results = await _healthService.CheckAllHealthStatusAsync();
             return Ok(results);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetHealth(string id)
+        [HttpGet("check-health/{id}")]
+        public async Task<IActionResult> CheckHealthSingleApp(string id)
         {
-            var result = await _healthService.CheckSingleAppAsync(id);
+            var result = await _healthService.CheckSingleAppHealthStatusAsync(id);
             if (result == null) return NotFound($"No application with id '{id}' found.");
             return Ok(result);
         }
-        
-        
-       
 
 
-
-        
     }
 }

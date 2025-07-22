@@ -25,7 +25,6 @@ namespace HealthCheckAPI.Services
         private readonly Email _emailSender;
         private readonly IRetryService _retryService;
 
-
         public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender, IRetryService retryService)
         {
             _scopeFactory = scopeFactory;
@@ -184,6 +183,140 @@ namespace HealthCheckAPI.Services
             return results;
         }
 
+        public async Task<List<object>> CheckAllHealthStatusAsync()
+        {
+            var applications = new List<ApplicationConfigModel>();
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                using var command = new SqlCommand("SELECT * FROM Applications", connection);
+                using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    applications.Add(new ApplicationConfigModel
+                    {
+                        Id = reader["Id"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
+                        ConnectionString = reader["ConnectionString"]?.ToString(),
+                        Query = reader["Query"]?.ToString()
+                    });
+                }
+            }
+
+            var results = new List<object>();
+
+            foreach (var app in applications)
+            {
+                string status = "Healthy";
+
+                try
+                {
+                    if (app.Type == "WebApp")
+                    {
+                        var client = _httpClientFactory.CreateClient();
+                        var response = await client.GetAsync(app.HealthCheckUrl);
+                        if (!response.IsSuccessStatusCode)
+                            status = "Unhealthy";
+                    }
+                    else if (app.Type == "Database")
+                    {
+                        using var dbConnection = new SqlConnection(app.ConnectionString);
+                        await dbConnection.OpenAsync();
+
+                        using var dbCommand = new SqlCommand(app.Query, dbConnection);
+                        var result = await dbCommand.ExecuteScalarAsync();
+                        if (result == null)
+                            status = "Unhealthy";
+                    }
+                }
+                catch
+                {
+                    status = "Unhealthy";
+                }
+
+                results.Add(new
+                {
+                    Id = app.Id,
+                    Name = app.Name,
+                    Status = status
+                });
+            }
+
+            return results;
+        }
+
+        public async Task<object> CheckSingleAppHealthStatusAsync(string id)
+        {
+            var connectionString = _config.GetConnectionString("SqlServerConnection");
+
+            
+
+
+            ApplicationConfigModel app = null;
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                using var command = new SqlCommand("SELECT * FROM Applications WHERE Id = @id", connection);
+                command.Parameters.AddWithValue("@id", id);
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    app = new ApplicationConfigModel
+                    {
+                        Id = reader["Id"].ToString(),
+                        Name = reader["Name"].ToString(),
+                        Type = reader["Type"].ToString(),
+                        HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
+                        ConnectionString = reader["ConnectionString"]?.ToString(),
+                        Query = reader["Query"]?.ToString()
+                    };
+                }
+            }
+
+            if (app == null) return null;
+
+            string status = "Healthy";
+
+            try
+            {
+                if (app.Type == "WebApp")
+                {
+                    var client = _httpClientFactory.CreateClient();
+                    var response = await client.GetAsync(app.HealthCheckUrl);
+                    if (!response.IsSuccessStatusCode) status = "Unhealthy";
+                }
+                else if (app.Type == "Database")
+                {
+                    using var dbConnection = new SqlConnection(app.ConnectionString);
+                    await dbConnection.OpenAsync();
+
+                    using var dbCommand = new SqlCommand(app.Query, dbConnection);
+                    var result = await dbCommand.ExecuteScalarAsync();
+                    if (result == null) status = "Unhealthy";
+                }
+            }
+            catch
+            {
+                status = "Unhealthy";
+            }
+
+            return new
+            {
+                Id = app.Id,
+                Name = app.Name,
+                Status = status
+            };
+        }
+
+
         public async Task<List<string>> GetAllUserEmailsAsync()
         {
             var emails = new List<string>();
@@ -248,7 +381,7 @@ namespace HealthCheckAPI.Services
             }
         }
 
-        public async Task<object> CheckSingleAppAsync(string id)
+        /*public async Task<object> CheckSingleAppAsync(string id)
         {
             var connectionString = _config.GetConnectionString("SqlServerConnection");
 
@@ -356,7 +489,7 @@ namespace HealthCheckAPI.Services
                 Name = app.Name,
                 Status = status
             };
-        }
+        }*/
 
        
 

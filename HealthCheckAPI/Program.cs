@@ -47,9 +47,16 @@ builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrateg
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 builder.Services.AddInMemoryRateLimiting();
 
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddHttpContextAccessor();
+
+
+
 
 builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<ChatQueryService>();
+
+
 
 
 
@@ -179,6 +186,21 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
         END";
     command.ExecuteNonQuery();
 
+    command.CommandText = @"
+        IF NOT EXISTS(SELECT * FROM sys.tables WHERE name = 'AuditLog')
+        BEGIN
+        CREATE TABLE AuditLog (
+            Id INT IDENTITY(1,1) PRIMARY KEY,
+            UserId NVARCHAR(100) NULL,
+            Timestamp DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+            ActionType NVARCHAR(50) NOT NULL,
+            EntityType NVARCHAR(50) NULL,
+            EntityId NVARCHAR(50) NULL,
+            Details NVARCHAR(MAX) NULL,
+            IpAddress NVARCHAR(45) NULL
+        );
+        END";
+    command.ExecuteNonQuery();
 }
 
 
@@ -190,9 +212,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseRouting();
-app.UseIpRateLimiting(); 
+app.UseIpRateLimiting();
 
-app.UseHttpMetrics(); 
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseHttpMetrics();
+app.UseMiddleware<AuditLogMiddleware>();
 
 app.UseEndpoints(endpoints =>
 {
@@ -202,7 +228,6 @@ app.UseEndpoints(endpoints =>
 
 app.UseHttpsRedirection(); 
 
-app.UseAuthentication();
-app.UseAuthorization();
+
 app.MapControllers();
 app.Run();

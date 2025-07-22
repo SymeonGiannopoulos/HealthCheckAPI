@@ -195,10 +195,7 @@ app.UseIpRateLimiting();
 
 app.UseHttpMetrics(); 
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapMetrics(); 
-});
+
 
 
 app.UseHttpsRedirection(); 

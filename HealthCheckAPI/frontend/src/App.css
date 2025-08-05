@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    font-family: 'Inter', sans-serif;
+}
+
+.App {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 50px 30px;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #ffffff, #f2f6fc);
+    min-height: 100vh;
+    border-radius: 20px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+    overflow-x: visible;
+    position: relative;
+}
+
+.nav-links .nav-link {
+    text-decoration: none;
+    color: #1a73e8;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: background-color 0.3s, color 0.3s;
+    display: inline-block;
+}
+
+    .nav-links .nav-link:hover,
+    .nav-links .nav-link:focus {
+        background-color: #e3f2fd;
+        color: #0b47a1;
+    }
+
+    /* Ενεργό (selected) κουμπί */
+    .nav-links .nav-link.active {
+        background-color: #1a73e8; /* μπλε φόντο */
+        color: white; /* λευκό κείμενο */
+        font-weight: 700;
+        box-shadow: 0 0 8px rgba(26, 115, 232, 0.6);
+    }
+
+
+
+h1 {
+    text-align: center;
+    font-size: 2.8rem;
+    color: #222;
+    margin-bottom: 50px;
+    font-weight: 600;
+    position: relative;
+    letter-spacing: 0.5px;
+}
+
+    h1::after {
+        content: "";
+        display: block;
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(to right, #4caf50, #81c784);
+        margin: 16px auto 0;
+        border-radius: 3px;
+    }
+
+
+.nav {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+    .nav a {
+        text-decoration: none;
+        color: #1a73e8;
+        font-weight: 600;
+        padding: 0.5rem 1rem; 
+        border-radius: 6px; 
+        transition: background-color 0.3s, color 0.3s;
+        display: inline-block; 
+    }
+
+        .nav a:hover,
+        .nav a:focus {
+            text-decoration: none;
+            background-color: #e3f2fd; 
+            color: #0b47a1;
+        }
+
+
+.logout-button {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+    .logout-button img {
+        width: 24px;
+        height: 24px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+        .logout-button img:hover {
+            opacity: 1;
+        }
+
+
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    border-radius: 16px;
+    background: #f9f9f9;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+    .auth-container input,
+    .auth-container button {
+        margin-bottom: 16px;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
+
+    .auth-container button {
+        background-color: #4caf50;
+        color: white;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+        .auth-container button:hover {
+            background-color: #45a049;
+        }
+
+table {
+    border: 1px solid #ccc;
+    width: 1200px;
+    table-layout: auto;
+}
+
+th, td {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    text-align: left;
+    white-space: nowrap;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+
+
+.audit-log-container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px 30px;
+    box-sizing: border-box;
+}
+
+.limit-input {
+    padding: 8px 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    margin-top: 8px;
+    display: block;
+    outline: none;
+    width: 150px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+    .limit-input:focus {
+        border-color: #4caf50;
+        box-shadow: 0 0 4px rgba(76, 175, 80, 0.3);
+    }
+
+
+
+.app-container.healthy {
+    background-color: #e8f5e9; 
+    border: 2px solid #4caf50;
+}
+
+.app-container.unhealthy {
+    background-color: #ffebee; 
+    border: 2px solid #f44336;
+}
+
+.app-container {
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    transition: background 0.3s, border 0.3s;
+}
+.logout-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: #333;
+    transition: color 0.2s;
+}
+
+    .logout-button:hover {
+        color: #e63946;
+    }
+

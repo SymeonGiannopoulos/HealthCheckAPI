@@ -1,10 +1,12 @@
 ﻿using HealthCheckAPI.Models;
 using HealthCheckAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCheckAPI.Controllers
 {
     [ApiController]
+    
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
@@ -17,9 +19,12 @@ namespace HealthCheckAPI.Controllers
             _jwtService = jwtService;
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
+            Console.WriteLine($"Login Attempt: {request.Username} / {request.Password}");
+
             var user = _userService.GetUserByUsername(request.Username);
             if (user == null)
                 return Unauthorized("Invalid username or password");
@@ -31,6 +36,7 @@ namespace HealthCheckAPI.Controllers
             return Ok(new { Token = token, user.Username, user.Email });
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         public IActionResult Register([FromBody] RegisterRequestModel request)
         {

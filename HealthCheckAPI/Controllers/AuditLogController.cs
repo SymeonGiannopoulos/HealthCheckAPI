@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class AuditLogController : ControllerBase

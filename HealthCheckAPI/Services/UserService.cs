@@ -1,6 +1,6 @@
 ﻿using HealthCheckAPI.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient; 
+using Microsoft.Data.SqlClient;
 
 namespace HealthCheckAPI.Services
 {
@@ -32,7 +32,7 @@ namespace HealthCheckAPI.Services
                     Id = reader.GetInt32(0),
                     Username = reader.GetString(1),
                     Password = reader.GetString(2),
-                    Email = reader.IsDBNull(3) ? null : reader.GetString(3), 
+                    Email = reader.IsDBNull(3) ? null : reader.GetString(3),
                 };
             }
             return null;

@@ -18,8 +18,6 @@ using Microsoft.OpenApi.Models;
 using Prometheus;
 using System;
 using System.Text;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -50,11 +48,12 @@ builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddHttpContextAccessor();
 
-
-
+builder.Services.AddHostedService<AuditLogCleanupService>();
 
 builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<ChatQueryService>();
+builder.Services.AddScoped<IChatQueryService, ChatQueryService>();
+
 
 
 
@@ -203,8 +202,22 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
     command.ExecuteNonQuery();
 }
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3003") 
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 
 var app = builder.Build();
+
+app.UseCors("AllowReactApp"); 
+
 
 if (app.Environment.IsDevelopment())
 {

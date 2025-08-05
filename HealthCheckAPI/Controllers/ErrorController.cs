@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ErrorController : ControllerBase

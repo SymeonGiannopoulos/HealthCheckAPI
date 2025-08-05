@@ -15,11 +15,18 @@ public class AuditLogMiddleware
     {
         await _next(context);
 
+      
+        var path = context.Request.Path.ToString().ToLower();
+
+        if (path.StartsWith("/api/auditlog"))
+        {
+            return;
+        }
+
         var userId = context.User.Identity?.Name ?? "Anonymous";
         var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
         var method = context.Request.Method;
-        var path = context.Request.Path;
         var statusCode = context.Response.StatusCode.ToString();
 
         string actionType = $"{method} {path}";

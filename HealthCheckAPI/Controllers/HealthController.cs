@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HealthController : ControllerBase

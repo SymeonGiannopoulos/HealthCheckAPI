@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ApplicationController : ControllerBase

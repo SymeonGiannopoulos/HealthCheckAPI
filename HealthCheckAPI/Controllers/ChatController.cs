@@ -5,14 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace HealthCheckAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ChatController : ControllerBase
     {
-        private readonly ChatQueryService _chatQueryService;
+        private readonly IChatQueryService _chatQueryService;
 
-        public ChatController(ChatQueryService chatQueryService)
+        public ChatController(IChatQueryService chatQueryService)
         {
             _chatQueryService = chatQueryService;
         }
@@ -25,10 +25,11 @@ namespace HealthCheckAPI.Controllers
                 return BadRequest("Το πεδίο 'Question' είναι υποχρεωτικό.");
             }
 
-            var answer = await _chatQueryService.GetAnswerAsync(request.Question);
+            var answer = await _chatQueryService.AnswerQuestionAsync(request.Question);
             return Ok(new { Answer = answer });
         }
     }
+
 
     public class QuestionRequest
     {

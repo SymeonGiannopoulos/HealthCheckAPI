@@ -53,8 +53,7 @@ public class AuditLogService : IAuditLogService
 
         using var command = new SqlCommand(@"
         INSERT INTO AuditLog (UserId, Timestamp, ActionType, EntityType, EntityId, Details, IpAddress)
-        VALUES (@UserId, @Timestamp, @ActionType, @EntityType, @EntityId, @Details, @IpAddress);
-    ", connection);
+        VALUES (@UserId, @Timestamp, @ActionType, @EntityType, @EntityId, @Details, @IpAddress);", connection);
 
         command.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
         command.Parameters.AddWithValue("@Timestamp", timestamp); 

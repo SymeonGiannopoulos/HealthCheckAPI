@@ -19,7 +19,6 @@ namespace HealthCheckAPI.Services
                 .WithTcpServer("localhost", 1883)
                 .Build();
 
-            // Σύνδεση + auto-reconnect
             _client.ConnectedAsync += async e =>
             {
                 Console.WriteLine("✅ Συνδέθηκε με MQTT Broker.");
@@ -40,7 +39,6 @@ namespace HealthCheckAPI.Services
                 }
             };
 
-            // Connect αρχικά
             _client.ConnectAsync(_options).GetAwaiter().GetResult();
         }
 

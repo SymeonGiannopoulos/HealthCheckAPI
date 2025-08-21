@@ -1,13 +1,11 @@
 ﻿namespace HealthCheckAPI.Models
 {
-    public class ApplicationConfigModel
+    public class CreateApplicationRequestModel
     {
-        public int Id { get; set; } 
         public string Name { get; set; }
         public string Type { get; set; }
         public string HealthCheckUrl { get; set; }
         public string ConnectionString { get; set; }
         public string Query { get; set; }
     }
-
 }

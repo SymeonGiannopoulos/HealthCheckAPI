@@ -24,8 +24,10 @@ namespace HealthCheckAPI.Services
         private readonly IHealthMemory _memory;
         private readonly Email _emailSender;
         private readonly IRetryService _retryService;
+        private readonly MqttService _mqttService;
 
-        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender, IRetryService retryService)
+
+        public HealthService(IServiceScopeFactory scopeFactory, IConfiguration config, IHttpClientFactory httpClientFactory, IHealthMemory memory, Email emailSender, IRetryService retryService, MqttService mqttService)
         {
             _scopeFactory = scopeFactory;
             _config = config;
@@ -33,6 +35,7 @@ namespace HealthCheckAPI.Services
             _memory = memory;
             _emailSender = emailSender;
             _retryService = retryService;
+            _mqttService = mqttService;
 
         }
 
@@ -56,7 +59,7 @@ namespace HealthCheckAPI.Services
                 {
                     applications.Add(new ApplicationConfigModel
                     {
-                        Id = reader["Id"].ToString(),
+                        Id = Convert.ToInt32(reader["Id"]),
                         Name = reader["Name"].ToString(),
                         Type = reader["Type"].ToString(),
                         HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
@@ -131,18 +134,20 @@ namespace HealthCheckAPI.Services
 
 
 
-                memory.StatusMap.TryGetValue(app.Id, out var previousStatus);
+                memory.StatusMap.TryGetValue(app.Id.ToString(), out var previousStatus);
 
                 if (status == "Healthy")
                 {
                     if (previousStatus != "Healthy")
                     {
+                        await _mqttService.PublishStatusAsync($"{app.Name}: Healthy");
+
                         using var connection = new SqlConnection(connectionString);
                         await connection.OpenAsync();
 
                         var command = connection.CreateCommand();
                         command.CommandText = "DELETE FROM HealthStatusLog WHERE Id = @id";
-                        command.Parameters.AddWithValue("@id", app.Id);
+                        command.Parameters.AddWithValue("@id", app.Id.ToString());
                         await command.ExecuteNonQueryAsync();
 
                         var userEmails = await GetAllUserEmailsAsync();
@@ -158,7 +163,9 @@ namespace HealthCheckAPI.Services
                 {
                     if (previousStatus != "Unhealthy")
                     {
-                        await LogUnhealthyStatusAsync(app.Id, app.Name, status);
+                        await LogUnhealthyStatusAsync(app.Id.ToString(), app.Name, status);
+                        await _mqttService.PublishStatusAsync($"{app.Name}: Unhealthy");
+
 
                         var userEmails = await GetAllUserEmailsAsync();
                         foreach (var email in userEmails)
@@ -170,7 +177,7 @@ namespace HealthCheckAPI.Services
                     }
                 }
 
-                memory.StatusMap[app.Id] = status;
+                memory.StatusMap[app.Id.ToString()] = status;
 
                 results.Add(new
                 {
@@ -198,7 +205,7 @@ namespace HealthCheckAPI.Services
                 {
                     applications.Add(new ApplicationConfigModel
                     {
-                        Id = reader["Id"].ToString(),
+                        Id = Convert.ToInt32(reader["Id"]),
                         Name = reader["Name"].ToString(),
                         Type = reader["Type"].ToString(),
                         HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),
@@ -271,7 +278,7 @@ namespace HealthCheckAPI.Services
                 {
                     app = new ApplicationConfigModel
                     {
-                        Id = reader["Id"].ToString(),
+                        Id = Convert.ToInt32(reader["Id"]),
                         Name = reader["Name"].ToString(),
                         Type = reader["Type"].ToString(),
                         HealthCheckUrl = reader["HealthCheckUrl"]?.ToString(),

@@ -16,7 +16,7 @@ public class AuditLogCleanupService : BackgroundService
     {
         _logger = logger;
         _connectionString = configuration.GetConnectionString("SqlServerConnection");
-        _retentionDays = configuration.GetValue<int>("AuditLog:RetentionDays", 30); 
+        _retentionDays = configuration.GetValue<int>("AuditLog:RetentionDays", 30);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,7 +33,6 @@ public class AuditLogCleanupService : BackgroundService
                 _logger.LogError(ex, "Error during audit log cleanup");
             }
 
-            
             await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
         }
     }

@@ -1,19 +1,23 @@
 ﻿using HealthCheckAPI.Interfaces;
 using System.Data.SqlClient;
-using HealthCheckAPI.Models;  
-
+using HealthCheckAPI.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 public class AuditLogService : IAuditLogService
 {
     private readonly string _connectionString;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly string _dbconnectionString;
 
     public AuditLogService(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
     {
         _connectionString = configuration.GetConnectionString("SqlServerConnection");
         _httpContextAccessor = httpContextAccessor;
     }
-
 
     public async Task LogAsync(string actionType, string? entityType = null, string? entityId = null, string? details = null, string? userId = null, string? ipAddress = null)
     {
@@ -27,7 +31,6 @@ public class AuditLogService : IAuditLogService
             ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
         }
 
-        
         DateTime timestamp;
         try
         {
@@ -43,7 +46,6 @@ public class AuditLogService : IAuditLogService
             }
             catch
             {
-                
                 timestamp = DateTime.UtcNow;
             }
         }
@@ -52,11 +54,11 @@ public class AuditLogService : IAuditLogService
         await connection.OpenAsync();
 
         using var command = new SqlCommand(@"
-        INSERT INTO AuditLog (UserId, Timestamp, ActionType, EntityType, EntityId, Details, IpAddress)
-        VALUES (@UserId, @Timestamp, @ActionType, @EntityType, @EntityId, @Details, @IpAddress);", connection);
+            INSERT INTO AuditLog (UserId, Timestamp, ActionType, EntityType, EntityId, Details, IpAddress)
+            VALUES (@UserId, @Timestamp, @ActionType, @EntityType, @EntityId, @Details, @IpAddress);", connection);
 
         command.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
-        command.Parameters.AddWithValue("@Timestamp", timestamp); 
+        command.Parameters.AddWithValue("@Timestamp", timestamp);
         command.Parameters.AddWithValue("@ActionType", actionType);
         command.Parameters.AddWithValue("@EntityType", (object?)entityType ?? DBNull.Value);
         command.Parameters.AddWithValue("@EntityId", (object?)entityId ?? DBNull.Value);
@@ -66,22 +68,54 @@ public class AuditLogService : IAuditLogService
         await command.ExecuteNonQueryAsync();
     }
 
+    public async Task<bool> DeleteAuditLogAsync(int id)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        var command = new SqlCommand("DELETE FROM AuditLog WHERE Id = @Id", connection);
+        command.Parameters.AddWithValue("@Id", id);
+
+        int rowsAffected = await command.ExecuteNonQueryAsync();
+
+        return rowsAffected > 0;
+    }
+
+    public async Task DeleteAuditLogsAsync(List<int> ids)
+    {
+        if (ids == null || ids.Count == 0)
+            return;
+
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        // Φτιάχνουμε μια παράμετρο για κάθε id
+        var parameters = string.Join(",", ids.Select((id, index) => $"@id{index}"));
+
+        using var command = new SqlCommand($"DELETE FROM AuditLog WHERE Id IN ({parameters})", connection);
+
+        for (int i = 0; i < ids.Count; i++)
+        {
+            command.Parameters.AddWithValue($"@id{i}", ids[i]);
+        }
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+
 
 
     public async Task<List<AuditLog>> GetAuditLogsAsync(int limit = 10)
     {
-        Console.WriteLine("Entered LogAsync");
-
         var logs = new List<AuditLog>();
 
         using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync();
 
         using var command = new SqlCommand(@"
-        SELECT TOP (@Limit) Id, UserId, Timestamp, ActionType, EntityType, EntityId, Details, IpAddress
-        FROM AuditLog
-        ORDER BY Timestamp DESC;
-    ", connection);
+            SELECT TOP (@Limit) Id, UserId, Timestamp, ActionType, EntityType, EntityId, Details, IpAddress
+            FROM AuditLog
+            ORDER BY Timestamp DESC;", connection);
 
         command.Parameters.AddWithValue("@Limit", limit);
 
@@ -104,7 +138,4 @@ public class AuditLogService : IAuditLogService
 
         return logs;
     }
-
-
-
 }

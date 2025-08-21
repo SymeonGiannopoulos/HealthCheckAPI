@@ -35,7 +35,7 @@ namespace HealthCheckAPI.Controllers
             {
                 applications.Add(new ApplicationConfigModel
                 {
-                    Id = reader.GetString(0),
+                    Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     Type = reader.GetString(2),
                     HealthCheckUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
@@ -66,7 +66,7 @@ namespace HealthCheckAPI.Controllers
             {
                 app = new ApplicationConfigModel
                 {
-                    Id = reader.GetString(0),
+                    Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     Type = reader.GetString(2),
                     HealthCheckUrl = reader.IsDBNull(3) ? null : reader.GetString(3),
@@ -81,12 +81,12 @@ namespace HealthCheckAPI.Controllers
             return Ok(app);
         }
 
-        
+
         [HttpPost]
-        public IActionResult Create([FromBody] ApplicationConfigModel app)
+        public IActionResult Create([FromBody] CreateApplicationRequestModel request)
         {
-            if (app == null || string.IsNullOrWhiteSpace(app.Id))
-                return BadRequest("Application Id is required.");
+            if (request == null || string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("Application name is required.");
 
             var connectionString = _configuration.GetConnectionString("SqlServerConnection");
 
@@ -95,30 +95,43 @@ namespace HealthCheckAPI.Controllers
 
             var command = connection.CreateCommand();
             command.CommandText = @"
-                INSERT INTO Applications (Id, Name, Type, HealthCheckUrl, ConnectionString, Query)
-                VALUES (@id, @name, @type, @healthCheckUrl, @connectionString, @query)";
-            command.Parameters.AddWithValue("@id", app.Id);
-            command.Parameters.AddWithValue("@name", app.Name ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@type", app.Type ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@healthCheckUrl", app.HealthCheckUrl ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@connectionString", app.ConnectionString ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@query", app.Query ?? (object)DBNull.Value);
+            INSERT INTO Applications (Name, Type, HealthCheckUrl, ConnectionString, Query)
+            VALUES (@name, @type, @healthCheckUrl, @connectionString, @query);
+            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            command.Parameters.AddWithValue("@name", request.Name ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@type", request.Type ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@healthCheckUrl", request.HealthCheckUrl ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@connectionString", request.ConnectionString ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue("@query", request.Query ?? (object)DBNull.Value);
 
             try
             {
-                command.ExecuteNonQuery();
-                return CreatedAtAction(nameof(GetById), new { id = app.Id }, app);
+                var newId = (int)command.ExecuteScalar();
+
+                var response = new ApplicationConfigModel
+                {
+                    Id = newId,
+                    Name = request.Name,
+                    Type = request.Type,
+                    HealthCheckUrl = request.HealthCheckUrl,
+                    ConnectionString = request.ConnectionString,
+                    Query = request.Query
+                };
+
+                return CreatedAtAction(nameof(GetById), new { id = newId }, response);
             }
             catch (SqlException ex)
             {
-                
                 return BadRequest(ex.Message);
             }
         }
 
-       
+
+
+
         [HttpPut("{id}")]
-        public IActionResult Update(string id, [FromBody] ApplicationConfigModel app)
+        public IActionResult Update(int id, [FromBody] ApplicationConfigModel app)
         {
             if (app == null || id != app.Id)
                 return BadRequest();

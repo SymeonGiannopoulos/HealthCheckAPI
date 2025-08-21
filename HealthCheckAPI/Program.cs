@@ -1,7 +1,6 @@
 ﻿using AspNetCoreRateLimit;
 using HealthCheckAPI.Controllers;
 using HealthCheckAPI.Interface;
-using HealthCheckAPI.Interface;
 using HealthCheckAPI.Interfaces;
 using HealthCheckAPI.Models;
 using HealthCheckAPI.Notifications;
@@ -54,13 +53,10 @@ builder.Services.AddScoped<DatabaseService>();
 builder.Services.AddScoped<ChatQueryService>();
 builder.Services.AddScoped<IChatQueryService, ChatQueryService>();
 
-
-
-
-
-
-
+builder.Services.AddSingleton<MqttService>();
 builder.Services.AddTransient<HealthController>();
+
+
 
 
 var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
@@ -163,13 +159,15 @@ using (var connection = new SqlConnection(builder.Configuration.GetConnectionStr
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Applications')
         BEGIN
             CREATE TABLE Applications (
-                Id NVARCHAR(50) PRIMARY KEY,
-                Name NVARCHAR(100) NOT NULL,
-                Type NVARCHAR(50),
-                HealthCheckUrl NVARCHAR(200),
-                ConnectionString NVARCHAR(MAX),
-                Query NVARCHAR(MAX)
-            );
+            Id INT IDENTITY(1,1) PRIMARY KEY,
+            Name NVARCHAR(100) NOT NULL,
+            Type NVARCHAR(50),
+            HealthCheckUrl NVARCHAR(200),
+            ConnectionString NVARCHAR(MAX),
+            Query NVARCHAR(MAX)
+);
+
+
         END";
     command.ExecuteNonQuery();
 

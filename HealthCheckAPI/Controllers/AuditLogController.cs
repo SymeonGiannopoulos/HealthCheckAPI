@@ -23,8 +23,27 @@ namespace HealthCheckAPI.Controllers
             return Ok(logs);
         }
 
-        
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAuditLog(int id)
+        {
+            var deleted = await _auditLogService.DeleteAuditLogAsync(id);
+            if (!deleted)
+                return NotFound();
+
+            return NoContent();
+        }
+
+        [HttpPost("delete-many")]
+        public async Task<IActionResult> DeleteManyAuditLogs([FromBody] List<int> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return BadRequest("No ids provided.");
+
+            await _auditLogService.DeleteAuditLogsAsync(ids);
+
+            return NoContent();
+        }
+
 
     }
-
 }

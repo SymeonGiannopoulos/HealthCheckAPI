@@ -50,11 +50,14 @@ namespace HealthCheckAPI.Services
             return new AppStatisticsDto
             {
                 AppId = appId,
-                AverageDowntimeMinutes = downtimeCount > 0 ? (double)totalDowntime / downtimeCount : 0,
-                DowntimesCount = downtimeCount,        
-                TotalDowntime = totalDowntime,    
-                AvailabilityPercent = Math.Round(availabilityPercent, 2)  
+                AverageDowntimeMinutes = downtimeCount > 0
+         ? Math.Round((double)totalDowntime / downtimeCount, 2)     
+         : 0,
+                DowntimesCount = downtimeCount,
+                TotalDowntime = totalDowntime,
+                AvailabilityPercent = Math.Round(availabilityPercent, 2)
             };
+
         }
     }
 }

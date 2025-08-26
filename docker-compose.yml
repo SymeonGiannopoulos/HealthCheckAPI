@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: ./HealthCheckAPI
+    ports:
+      - "7057:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
+  frontend:
+    build: ./Frontend
+    ports:
+      - "3003:80"
+

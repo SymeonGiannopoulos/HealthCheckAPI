@@ -1,0 +1,46 @@
+.error-log-wrapper {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background-color: transparent;
+    border-radius: 8px;
+    box-shadow: 0;
+}
+
+.filter-container {
+    margin-bottom: 20px;
+}
+
+select {
+    padding: 6px 12px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.message {
+    font-size: 16px;
+    color: #333;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.error-log-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.error-log-item {
+    background-color: #fff5f5; 
+    margin: 8px 0;
+    padding: 12px 16px;
+    border: 1px solid #f5c2c2;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+}
+
+
+    .error-log-item strong {
+        color: #333;
+    }

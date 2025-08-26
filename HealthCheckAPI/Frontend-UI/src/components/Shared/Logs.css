@@ -1,0 +1,40 @@
+
+.audit-log-container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+}
+
+    .audit-log-container table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #ccc;
+    }
+
+    .audit-log-container th,
+    .audit-log-container td {
+        padding: 8px;
+        text-align: left;
+        border: 1px solid #ccc;
+    }
+
+    .audit-log-container th {
+        background-color: #e0e0e0;
+        font-weight: bold;
+    }
+
+    .audit-log-container .message {
+        padding: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .audit-log-container .error {
+        color: red;
+    }
+
+    .audit-log-container .limit-input {
+        padding: 4px 8px;
+        font-size: 14px;
+    }

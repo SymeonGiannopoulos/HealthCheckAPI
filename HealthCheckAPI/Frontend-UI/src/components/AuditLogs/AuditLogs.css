@@ -1,0 +1,73 @@
+.audit-logs-container {
+    padding: 30px 40px;
+    max-width: 1100px;
+    margin: 40px auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: transparent;
+    border-radius: 8px;
+}
+
+.audit-logs-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.audit-logs-limit-input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.audit-logs-message {
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.audit-logs-error {
+    color: red;
+}
+
+.audit-logs-table-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.audit-logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+    .audit-logs-table thead {
+        background-color: #e0e0e0;
+    }
+
+    .audit-logs-table th,
+    .audit-logs-table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+    }
+
+.audit-logs-error-row {
+    background-color: #ffe5e5;
+    color: #b30000;
+    font-weight: bold;
+}
+.delete-selected-btn {
+    padding: 10px 15px;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+    .delete-selected-btn:hover {
+        background-color: #c9302c;
+    }
